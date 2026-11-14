@@ -5,13 +5,12 @@
 import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, COLOR_SWATCHES, findLayer } from "@/lib/pelc/model"
 import { tokenizeWords } from "@/lib/pelc/measure"
-import { letterClusters } from "@/lib/pelc/arabicText"
 import { PELC_FONTS } from "@/lib/pelc/fonts"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { Scissors, SplitSquareHorizontal } from "lucide-react"
+import { SplitSquareHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function WordPanel() {
@@ -26,7 +25,6 @@ export function WordPanel() {
   const setGold = useEditorStore((s) => s.setGold)
   const setShadow = useEditorStore((s) => s.setShadow)
   const splitLayerIntoWords = useEditorStore((s) => s.splitLayerIntoWords)
-  const splitLayerIntoSegments = useEditorStore((s) => s.splitLayerIntoSegments)
 
   const layer = findLayer(doc, selectedLayerId)
   if (!layer?.text) {
@@ -34,7 +32,6 @@ export function WordPanel() {
   }
   const t = layer.text
   const wordCount = tokenizeWords(t.text).length
-  const clusterCount = letterClusters(t.text).length
 
   return (
     <div className="space-y-4">
@@ -70,25 +67,6 @@ export function WordPanel() {
           >
             <SplitSquareHorizontal className="size-4" />
             تبدیل جمله به کلماتِ مستقل
-          </button>
-        </section>
-      )}
-
-      {clusterCount >= 2 && (
-        <section className="space-y-2 rounded-lg border border-primary/40 bg-accent/40 p-3">
-          <Label className="text-sm font-semibold">بخش‌های کوچک‌تر</Label>
-          <p className="text-xs leading-5 text-muted-foreground">
-            این واژه {clusterCount.toLocaleString("fa-IR")} بخش دارد (حرف + علائم، یا کشیده). با این دکمه هر بخش یک
-            لایهٔ مستقل می‌شود؛ فرم هر حرف در واژه (میانی/پایانی/آغازی) حفظ می‌شود تا قطعه‌ها کنار هم همان واژه را
-            بسازند و هر بخش جداگانه تکان بخورد.
-          </p>
-          <button
-            type="button"
-            onClick={() => splitLayerIntoSegments(layer.id)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary bg-card px-3 py-2.5 text-sm font-semibold shadow-sm transition-colors hover:bg-accent/60"
-          >
-            <Scissors className="size-4" />
-            تبدیل به بخش‌های کوچک‌تر
           </button>
         </section>
       )}

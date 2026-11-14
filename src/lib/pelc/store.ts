@@ -23,9 +23,8 @@ import {
   type MarkType,
   type PelcDocument,
 } from "./model"
-import { measureClusterRects, measureWordPositions, slicePerLetter, tokenizeWords } from "./measure"
+import { measureWordPositions, slicePerLetter, tokenizeWords } from "./measure"
 import {
-  clusterNaturalForm,
   insertKashidaBefore,
   insertMarkAfter,
   letterClusters,
@@ -87,8 +86,6 @@ interface EditorState {
 
   /** تبدیل جملهٔ لایه به لایه‌های تک‌کلمه‌ای در همان جای فعلی */
   splitLayerIntoWords: (id: string) => boolean
-  /** شکستن لایهٔ واژه به بخش‌های ریزتر (هر حرف/کشیده یک لایهٔ مستقل) در همان جای فعلی */
-  splitLayerIntoSegments: (id: string) => boolean
   /** تکان‌دادن ریز لایهٔ انتخاب‌شده (جهت‌نماها) */
   nudgeSelectedLayer: (dx: number, dy: number) => void
 
@@ -362,60 +359,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
       layers.splice(idx, 1, ...wordLayers)
       state.commit({ ...state.doc, layers }, "تبدیل جمله به کلماتِ مستقل")
       set({ selectedLayerId: wordLayers[0].id, selectedClusterStart: null })
-      return true
-    },
-
-    /**
-     * شکستن واژه به بخش‌های کوچک‌تر: هر کلاستر حرف (حرف + علائمش) و هر کشیده
-     * یک لایهٔ مستقل می‌شود، دقیقاً در همان جای رندر فعلی.
-     *
-     * فرم هر حرف در واژهٔ اصلی (میانی/پایانی/آغازی) محاسبه و به‌عنوان
-     * formOverride روی بخش ثبت می‌شود تا قطعه‌ها کنار هم همچنان واژهٔ اصلی
-     * را بسازند؛ گونهٔ GSUB/قلم/رنگِ تک‌حرف هم با حرف خودش می‌رود. اگر کاربر
-     * قبلاً فرم حرف را دستی عوض کرده باشد، انتخاب او بر فرم طبیعی مقدم است.
-     */
-    splitLayerIntoSegments: (id) => {
-      const state = get()
-      const layer = findLayer(state.doc, id)
-      if (!layer?.text) return false
-      const clusters = letterClusters(layer.text.text)
-      if (clusters.length < 2) return false
-      const boxes = measureClusterRects(layer, state.viewScale)
-      if (!boxes || boxes.length !== clusters.length) return false
-
-      const segLayers: Layer[] = clusters.map((c, i) => {
-        const copy: Layer = JSON.parse(JSON.stringify(layer))
-        copy.id = newId()
-        copy.name = `بخش: ${layer.text!.text.slice(c.start, c.endExclusive).slice(0, 8)}`
-        const segText = layer.text!.text.slice(c.start, c.endExclusive)
-        const prev = layer.text!.perLetter[String(c.start)]
-        const userForm = prev?.formOverride ?? null
-        const naturalForm = clusterNaturalForm(layer.text!.text, c.start)
-        const perLetter: Record<string, LetterOverride> = {}
-        const finalForm = userForm && userForm !== "AUTO" ? userForm : naturalForm
-        if (prev) {
-          perLetter["0"] = { ...prev, formOverride: finalForm }
-        } else if (finalForm) {
-          perLetter["0"] = { ...defaultLetterOverride(), formOverride: finalForm }
-        }
-        copy.text = {
-          ...layer.text!,
-          text: segText,
-          perLetter,
-        }
-        copy.transform = {
-          ...layer.transform,
-          tx: Math.round(layer.transform.tx + boxes[i].x),
-          ty: Math.round(layer.transform.ty + boxes[i].y),
-        }
-        return copy
-      })
-
-      const idx = state.doc.layers.findIndex((l) => l.id === id)
-      const layers = [...state.doc.layers]
-      layers.splice(idx, 1, ...segLayers)
-      state.commit({ ...state.doc, layers }, "تبدیل واژه به بخش‌های کوچک‌تر")
-      set({ selectedLayerId: segLayers[0].id, selectedClusterStart: null })
       return true
     },
 

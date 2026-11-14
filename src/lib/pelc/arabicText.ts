@@ -376,30 +376,6 @@ export function displayTextFor(text: string, perLetter: Record<string, LetterOve
 }
 
 /**
- * فرمِ طبیعی کلاستر در زمینهٔ واژه — برای شکستن واژه به بخش‌های مستقل.
- *
- * وقتی واژه به حروف جدا تبدیل می‌شود، هر حرف باید با همان فرمی رندر شود که
- * در واژه داشت (میانی/پایانی/آغازی) وگرنه همه جدا (تنها) می‌شوند و قطعه‌های
- * واژه دیگر کنار هم واژهٔ اصلی را نمی‌سازند. خروجی null یعنی AUTO — حرف
- * از هیچ سمت نمی‌چسبد و فرم تنها همان فرم طبیعی‌اش است (مثل ا، د، ر، و).
- */
-export function clusterNaturalForm(text: string, clusterStart: number): Exclude<LetterForm, "AUTO"> | null {
-  const clusters = letterClusters(text)
-  const idx = clusters.findIndex((c) => c.start === clusterStart)
-  if (idx < 0) return null
-  const c = clusters[idx]
-  const { adjacentPrev, adjacentNext, prevJoinsFwd, nextJoinsBack } = formNeighbors(clusters, idx)
-  const canFwd = joinsForward(c.base)
-  const canBack = joinsBackward(c.base)
-  const connectedBack = adjacentPrev && prevJoinsFwd && canBack
-  const connectedFwd = adjacentNext && nextJoinsBack && canFwd
-  if (connectedBack && connectedFwd) return "MEDIAL"
-  if (connectedBack) return "FINAL"
-  if (connectedFwd) return "INITIAL"
-  return null
-}
-
-/**
  * کدام فرم‌ها برای کلاستر [clusterStart] مجازند؟ (برای غیرفعال‌کردن دکمه‌های UI)
  * قانون همان اتصال‌شناسی کشیده است: حرف باید از سمتِ مربوطه بچسبد و حرفِ
  * مجاورِ واقعاً چسبان داشته باشد؛ اگر حرفِ مجاور نمی‌چسبد (مثل الف/دال) فرم
