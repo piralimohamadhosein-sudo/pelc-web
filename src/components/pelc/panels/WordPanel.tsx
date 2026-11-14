@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 export function WordPanel() {
   const doc = useEditorStore((s) => s.doc)
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId)
+  const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds)
   const setLayerText = useEditorStore((s) => s.setLayerText)
   const setLayerFont = useEditorStore((s) => s.setLayerFont)
   const setLayerFontSize = useEditorStore((s) => s.setLayerFontSize)
@@ -32,6 +33,8 @@ export function WordPanel() {
   }
   const t = layer.text
   const wordCount = tokenizeWords(t.text).length
+  // «انتخاب همه» فعال است: رنگ روی همهٔ لایه‌های انتخاب‌شده اعمال می‌شود
+  const isMultiSelect = selectedLayerIds.length > 1
 
   return (
     <div className="space-y-4">
@@ -95,6 +98,15 @@ export function WordPanel() {
 
       <section className="space-y-2">
         <Label className="text-sm font-semibold">رنگ</Label>
+        {isMultiSelect && (
+          <p className="rounded-md border border-primary/40 bg-accent/40 px-2.5 py-1.5 text-xs leading-5">
+            «انتخاب همه» فعال است — با انتخاب یک رنگ، رنگ همهٔ{' '}
+            <span dir="ltr" className="font-semibold">
+              {selectedLayerIds.length.toLocaleString("fa-IR")}
+            </span>{' '}
+            لایهٔ انتخاب‌شده با هم عوض می‌شود.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {COLOR_SWATCHES.map((c) => (
             <button

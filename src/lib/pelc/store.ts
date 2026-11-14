@@ -476,6 +476,26 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setLayerColor: (argb) => {
       const state = get()
+      // انتخاب چندگانه فعال است («انتخاب همه»): یک رنگ روی همهٔ لایه‌های
+      // انتخاب‌شده اعمال می‌شود؛ لایه‌های قفل‌شده مستثنا هستند — همان الگوی
+      // تکان‌دادن گروهی، یک گام تاریخچه با کلید ادغام برای رنگ‌گیر پیوسته.
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) =>
+            ids.has(l.id) && !l.locked
+              ? {
+                  ...l,
+                  style: { ...l.style, color: argb },
+                  text: l.text ? { ...l.text, color: argb } : l.text,
+                }
+              : l,
+          ),
+        }
+        state.commit(next, "رنگ همهٔ لایه‌های انتخاب‌شده", "color:multi")
+        return
+      }
       const layer = findLayer(state.doc, state.selectedLayerId)
       if (!layer) return
       const next = withLayer(state.doc, layer.id, (l) => ({
