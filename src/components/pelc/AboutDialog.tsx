@@ -43,7 +43,7 @@ const ROWS: { web: string; android: string; title: string }[] = [
   },
   {
     title: "خروجی‌ها",
-    web: "PNG، JPG، SVG، ‎.pelc — حالت‌های حرف و کشیده و علامت‌ها در خروجی حفظ می‌شود",
+    web: "PNG، JPG — حالت‌های حرف و کشیده و علامت‌ها در خروجی حفظ می‌شود",
     android: "همهٔ این‌ها + PSD لایه‌باز، PDF وکتوری، DXF",
   },
 ]

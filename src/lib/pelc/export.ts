@@ -3,18 +3,16 @@
  *
  *  - PNG شفاف یا با پس‌زمینهٔ سند
  *  - JPG با کنترل کیفیت (پیش‌فرض ۹۲ مثل اندروید)
- *  - SVG وکتوری با جاسازی فونت به‌صورت base64 (فونت‌مستقل، مشابه نسخهٔ اندروید)
- *  - .pelc همان JSON مدل سند (سازگار با اپ اندروید)
  *
- * PSD/DXF/PDF در بیلد اندروید ارائه می‌شوند؛ در نسخهٔ وب آزمایشی نیستند.
+ * PSD/DXF/PDF/SVG در بیلد اندروید ارائه می‌شوند؛ در نسخهٔ وب آزمایشی نیستند.
  */
 
 import type { CSSProperties } from "react"
 import { argbToCss, type Layer, type PelcDocument } from "./model"
 import { displayTextFor } from "./arabicText"
-import { ensureFontLoaded, fontById, fontCssFamily } from "./fonts"
+import { ensureFontLoaded, fontCssFamily } from "./fonts"
 
-export type ExportFormat = "PNG" | "JPG" | "SVG" | "PELC"
+export type ExportFormat = "PNG" | "JPG"
 
 export interface RasterOptions {
   /** ضریب بزرگ‌نمایی خروجی روی اندازهٔ سند */
@@ -34,7 +32,7 @@ function layerCssFont(layer: Layer): string {
 }
 
 /**
- * استایل‌های اعمال‌شونده بر متن لایه — یک منبع حقیقت برای نمایش بوم و خروجی SVG.
+ * استایل‌های اعمال‌شونده بر متن لایه — یک منبع حقیقت برای نمایش بوم و خروجی.
  * [scale] برای نمایش داخل بوم است (۱ = واحدهای سند).
  */
 export function layerTextStyle(layer: Layer, scale = 1): CSSProperties {
@@ -176,103 +174,6 @@ export async function exportJpg(doc: PelcDocument, opts: RasterOptions): Promise
   return canvasToBlob(canvas, "image/jpeg", Math.min(100, Math.max(60, opts.quality)) / 100)
 }
 
-/** جاسازی فایل فونت به‌صورت data URI برای SVG فونت‌مستقل */
-async function fontDataUri(fontId: string): Promise<string> {
-  const font = fontById(fontId)
-  const res = await fetch(`/fonts/${font.file}`)
-  if (!res.ok) return ""
-  const buf = await res.arrayBuffer()
-  const bytes = new Uint8Array(buf)
-  let binary = ""
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
-  }
-  return `data:font/ttf;base64,${btoa(binary)}`
-}
-
-export async function exportSvg(doc: PelcDocument, opts?: { transparent?: boolean }): Promise<Blob> {
-  const transparent = opts?.transparent === true || doc.background.transparent
-  const usedFontIds = [...new Set(doc.layers.map((l) => l.text?.fontId).filter(Boolean) as string[])]
-  const dataUris = new Map<string, string>()
-  for (const id of usedFontIds) dataUris.set(id, await fontDataUri(id))
-
-  const { width, height } = doc.canvas
-  const defs: string[] = []
-  for (const id of usedFontIds) {
-    const f = fontById(id)
-    const uri = dataUris.get(id)
-    if (uri) {
-      defs.push(
-        `    @font-face { font-family: ${f.cssFamily}; font-weight: ${id === "amiri-bold" ? 700 : 400}; src: url(${uri}) format("truetype"); }`,
-      )
-    }
-  }
-
-  const bg = transparent
-    ? ""
-    : `  <rect width="${width}" height="${height}" fill="${argbToCss(doc.background.color)}"/>\n`
-
-  const layerEls: string[] = []
-  for (const layer of doc.layers) {
-    if (!layer.visible || !layer.text) continue
-    const t = layer.text
-    const st = layer.style
-    const tags = Object.values(t.perLetter)
-      .map((o) => o.variantTag)
-      .filter((v): v is string => Boolean(v))
-    const features = tags.length > 0 ? ` font-feature-settings="${tags.map((tg) => `"${tg}" 1`).join(",")}"` : ""
-    const family = fontCssFamily(t.fontId)
-    const weight = t.fontId === "amiri-bold" ? 700 : 400
-    const fill =
-      st.fillMode === "GOLD" && st.gold?.enabled
-        ? `url(#gold-${layer.id})`
-        : argbToCss(st.color)
-    const goldDef =
-      st.fillMode === "GOLD" && st.gold?.enabled
-        ? `  <linearGradient id="gold-${layer.id}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="${argbToCss(st.gold.innerColor)}"/>
-    <stop offset="0.55" stop-color="${argbToCss(st.gold.outerColor)}"/>
-    <stop offset="1" stop-color="${argbToCss(st.gold.innerColor)}"/>
-  </linearGradient>\n`
-        : ""
-    if (goldDef) defs.push(goldDef)
-
-    const lines = displayTextFor(t.text, t.perLetter).split("\n")
-    const tspans = lines
-      .map((line, i) => `    <tspan x="${layer.transform.tx}" y="${layer.transform.ty + i * t.fontSize * t.lineHeight}">${xmlEscape(line)}</tspan>`)
-      .join("\n")
-
-    layerEls.push(
-      `  <text font-family=${quoteAttr(family)} font-weight="${weight}" font-size="${t.fontSize}" fill="${fill}" direction="${t.rtl ? "rtl" : "ltr"}" text-anchor="end"${features} opacity="${layer.opacity}">\n${tspans}\n  </text>`,
-    )
-  }
-
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <defs>
-    <style>
-${defs.join("\n")}
-    </style>
-  </defs>
-${bg}${layerEls.join("\n")}
-</svg>
-`
-  return new Blob([svg], { type: "image/svg+xml;charset=utf-8" })
-}
-
-function xmlEscape(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-}
-
-function quoteAttr(s: string): string {
-  return `"${s.replace(/"/g, "'")}"`
-}
-
-export function exportPelcJson(doc: PelcDocument): Blob {
-  return new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" })
-}
-
 /** دانلود یک Blob به‌عنوان فایل */
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -294,5 +195,5 @@ export function safeFilename(title: string): string {
 // قلاب آزمون مرورگری: دسترسی مستقیم توابع خروجی در کنسول برای عیب‌یابی.
 // مثل __pelcStore باید بعد از تعریف توابع اجرا شود.
 if (typeof window !== "undefined") {
-  ;(window as unknown as Record<string, unknown>).__pelcExport = { exportPng, exportSvg }
+  ;(window as unknown as Record<string, unknown>).__pelcExport = { exportPng, exportJpg }
 }

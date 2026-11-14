@@ -1,8 +1,7 @@
 "use client"
 
 /**
- * گفت‌وگوی ذخیره — همان جریان نسخهٔ اندروید: روی ذخیره، قالب از کاربر پرسیده
- * می‌شود و سند همیشه به‌صورت .pelc هم ذخیره می‌شود.
+ * گفت‌وگوی ذخیره — روی ذخیره، قالب خروجی تصویری از کاربر پرسیده می‌شود (PNG یا JPG).
  */
 
 import { useState } from "react"
@@ -22,9 +21,7 @@ import { useEditorStore } from "@/lib/pelc/store"
 import {
   downloadBlob,
   exportJpg,
-  exportPelcJson,
   exportPng,
-  exportSvg,
   safeFilename,
   type ExportFormat,
 } from "@/lib/pelc/export"
@@ -35,8 +32,6 @@ import { cn } from "@/lib/utils"
 const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
   { id: "PNG", label: "PNG", hint: "شفاف یا با پس‌زمینه — بی‌افت‌خیز" },
   { id: "JPG", label: "JPG", hint: "با کنترل کیفیت" },
-  { id: "SVG", label: "SVG", hint: "وکتوری فونت‌مستقل" },
-  { id: "PELC", label: "پروژهٔ ‎.pelc", hint: "همهٔ لایه‌ها و ویرایش‌ها" },
 ]
 
 export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -53,20 +48,15 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     setBusy(true)
     try {
       const base = safeFilename(doc.title)
-      const pelc = exportPelcJson(doc)
       const wantTransparent = transparentBg === true
       if (format === "PNG") {
         downloadBlob(await exportPng(doc, { scale, quality, transparent: wantTransparent }), `${base}.png`)
       } else if (format === "JPG") {
         downloadBlob(await exportJpg(doc, { scale, quality, transparent: wantTransparent }), `${base}.jpg`)
-      } else if (format === "SVG") {
-        downloadBlob(await exportSvg(doc, { transparent: wantTransparent }), `${base}.svg`)
       }
-      // سند همیشه به‌صورت .pelc هم ذخیره می‌شود (با پس‌زمینهٔ خودِ سند)
-      downloadBlob(pelc, `${base}.pelc`)
       toast({
         title: "ذخیره شد",
-        description: `${FORMATS.find((f) => f.id === format)?.label} + فایل پروژهٔ ‎.pelc${wantTransparent ? " — پس‌زمینهٔ شفاف" : ""}`,
+        description: `${FORMATS.find((f) => f.id === format)?.label}${wantTransparent ? " — پس‌زمینهٔ شفاف" : ""}`,
       })
       onOpenChange(false)
     } catch (e) {
@@ -86,8 +76,7 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         <DialogHeader>
           <DialogTitle>ذخیره در چه قالبی؟</DialogTitle>
           <DialogDescription>
-            علاوه بر قالب انتخابی، همیشه یک نسخهٔ پروژهٔ <span dir="ltr">.pelc</span> هم دانلود می‌شود تا همهٔ
-            لایه‌ها و ویرایش‌ها حفظ بماند.
+            قالب فایل خروجی را انتخاب کنید؛ فایل تصویری با همان قالب دانلود می‌شود.
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +91,7 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 format === f.id ? "border-primary bg-accent" : "bg-card hover:bg-accent/50",
               )}
             >
-              <span className="block text-sm font-semibold" dir={f.id === "PELC" ? "rtl" : "ltr"}>
+              <span className="block text-sm font-semibold" dir="ltr">
                 {f.label}
               </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">{f.hint}</span>
@@ -114,8 +103,8 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         <div className="space-y-2 rounded-lg border-2 border-dashed border-chart-2/50 bg-chart-2/5 p-3">
           <Label className="text-sm font-semibold">می‌خواهی کل پروژه با پس‌زمینهٔ شفاف ذخیره شود؟</Label>
           <p className="text-xs leading-5 text-muted-foreground">
-            پس‌زمینهٔ شفاف برای استفاده روی پوستر و ترکیب با تصاویر دیگر مناسب است. قالب‌های PNG و SVG شفافیت را
-            نگه می‌دارند؛ JPG شفافیت ندارد و روی سفید ذخیره می‌شود.
+            پس‌زمینهٔ شفاف برای استفاده روی پوستر و ترکیب با تصاویر دیگر مناسب است. قالب PNG شفافیت را
+            نگه می‌دارد؛ JPG شفافیت ندارد و روی سفید ذخیره می‌شود.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -141,11 +130,11 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           </div>
           {format === "JPG" && transparentBg === true && (
             <p className="text-xs font-medium text-chart-2">
-              JPG شفافیت ندارد؛ خروجی روی پس‌زمینهٔ سفید ذخیره می‌شود. برای شفاف واقعی PNG یا SVG را انتخاب کنید.
+              JPG شفافیت ندارد؛ خروجی روی پس‌زمینهٔ سفید ذخیره می‌شود. برای شفاف واقعی PNG را انتخاب کنید.
             </p>
           )}
           <p className="text-[11px] leading-4 text-muted-foreground">
-            این انتخاب فقط روی فایل خروجی اعمال می‌شود؛ پروژهٔ ‎.pelc پس‌زمینهٔ خود سند را نگه می‌دارد.
+            این انتخاب فقط روی فایل خروجی اعمال می‌شود.
           </p>
         </div>
 
@@ -179,12 +168,6 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             </Label>
             <Slider min={60} max={100} step={1} value={[quality]} onValueChange={([v]) => setQuality(v)} className="mt-2" />
           </div>
-        )}
-
-        {format === "SVG" && (
-          <p className="text-xs text-muted-foreground">
-            فونت‌های به‌کاررفته داخل فایل جاسازی می‌شوند؛ SVG در هر دستگاهی همان شکل را نشان می‌دهد.
-          </p>
         )}
 
         <DialogFooter className="gap-2">
