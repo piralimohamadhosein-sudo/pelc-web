@@ -21,6 +21,8 @@ export interface RasterOptions {
   scale: 1 | 2
   /** فقط برای JPG: کیفیت ۶۰..۱۰۰ */
   quality: number
+  /** پس‌زمینهٔ شفاف برای خروجی — مناسب استفاده روی پوستر (به جز JPG که شفافیت ندارد) */
+  transparent?: boolean
 }
 
 function layerCssFont(layer: Layer): string {
@@ -70,15 +72,27 @@ export function layerTextStyle(layer: Layer, scale = 1): CSSProperties {
   return style
 }
 
-/** رندر کامل سند روی بوم 2D (برای PNG/JPG) — شکل‌دهی را مرورگر انجام می‌دهد */
-async function renderDocumentToCanvas(doc: PelcDocument, scale: number): Promise<HTMLCanvasElement> {
+/**
+ * رندر کامل سند روی بوم 2D (برای PNG/JPG) — شکل‌دهی را مرورگر انجام می‌دهد.
+ * [forceTransparent] پس‌زمینه را خالی می‌گذارد (کانال آلفا)؛ [flattenWhite]
+ * برای قالب‌های بدون آلفا (JPG) پس‌زمینهٔ سفید می‌کشد تا سیاه نشود.
+ */
+async function renderDocumentToCanvas(
+  doc: PelcDocument,
+  scale: number,
+  forceTransparent = false,
+  flattenWhite = false,
+): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas")
   canvas.width = Math.round(doc.canvas.width * scale)
   canvas.height = Math.round(doc.canvas.height * scale)
   const ctx = canvas.getContext("2d")!
   ctx.scale(scale, scale)
 
-  if (!doc.background.transparent) {
+  if (flattenWhite) {
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, doc.canvas.width, doc.canvas.height)
+  } else if (!forceTransparent && !doc.background.transparent) {
     ctx.fillStyle = argbToCss(doc.background.color)
     ctx.fillRect(0, 0, doc.canvas.width, doc.canvas.height)
   }
@@ -151,12 +165,14 @@ function canvasToBlob(canvas: HTMLCanvasElement, mime: string, quality?: number)
 }
 
 export async function exportPng(doc: PelcDocument, opts: RasterOptions): Promise<Blob> {
-  const canvas = await renderDocumentToCanvas(doc, opts.scale)
+  const canvas = await renderDocumentToCanvas(doc, opts.scale, opts.transparent === true)
   return canvasToBlob(canvas, "image/png")
 }
 
 export async function exportJpg(doc: PelcDocument, opts: RasterOptions): Promise<Blob> {
-  const canvas = await renderDocumentToCanvas(doc, opts.scale)
+  // JPG کانال آلفا ندارد؛ اگر شفاف خواسته شده باشد، روی سفید تخت می‌شود
+  const transparent = opts.transparent === true
+  const canvas = await renderDocumentToCanvas(doc, opts.scale, transparent, transparent)
   return canvasToBlob(canvas, "image/jpeg", Math.min(100, Math.max(60, opts.quality)) / 100)
 }
 
@@ -175,7 +191,8 @@ async function fontDataUri(fontId: string): Promise<string> {
   return `data:font/ttf;base64,${btoa(binary)}`
 }
 
-export async function exportSvg(doc: PelcDocument): Promise<Blob> {
+export async function exportSvg(doc: PelcDocument, opts?: { transparent?: boolean }): Promise<Blob> {
+  const transparent = opts?.transparent === true || doc.background.transparent
   const usedFontIds = [...new Set(doc.layers.map((l) => l.text?.fontId).filter(Boolean) as string[])]
   const dataUris = new Map<string, string>()
   for (const id of usedFontIds) dataUris.set(id, await fontDataUri(id))
@@ -192,7 +209,7 @@ export async function exportSvg(doc: PelcDocument): Promise<Blob> {
     }
   }
 
-  const bg = doc.background.transparent
+  const bg = transparent
     ? ""
     : `  <rect width="${width}" height="${height}" fill="${argbToCss(doc.background.color)}"/>\n`
 
@@ -272,4 +289,10 @@ export function downloadBlob(blob: Blob, filename: string) {
 export function safeFilename(title: string): string {
   const cleaned = title.replace(/[\\/:*?"<>|]/g, "-").trim()
   return cleaned || "بدون-عنوان"
+}
+
+// قلاب آزمون مرورگری: دسترسی مستقیم توابع خروجی در کنسول برای عیب‌یابی.
+// مثل __pelcStore باید بعد از تعریف توابع اجرا شود.
+if (typeof window !== "undefined") {
+  ;(window as unknown as Record<string, unknown>).__pelcExport = { exportPng, exportSvg }
 }

@@ -46,22 +46,28 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [scale, setScale] = useState<1 | 2>(1)
   const [quality, setQuality] = useState(92)
   const [busy, setBusy] = useState(false)
+  /** پاسخ پرسش پس‌زمینه: null = هنوز انتخاب نشده، true = شفاف (پوستر)، false = پس‌زمینهٔ سند */
+  const [transparentBg, setTransparentBg] = useState<boolean | null>(null)
 
   const save = async () => {
     setBusy(true)
     try {
       const base = safeFilename(doc.title)
       const pelc = exportPelcJson(doc)
+      const wantTransparent = transparentBg === true
       if (format === "PNG") {
-        downloadBlob(await exportPng(doc, { scale, quality }), `${base}.png`)
+        downloadBlob(await exportPng(doc, { scale, quality, transparent: wantTransparent }), `${base}.png`)
       } else if (format === "JPG") {
-        downloadBlob(await exportJpg(doc, { scale, quality }), `${base}.jpg`)
+        downloadBlob(await exportJpg(doc, { scale, quality, transparent: wantTransparent }), `${base}.jpg`)
       } else if (format === "SVG") {
-        downloadBlob(await exportSvg(doc), `${base}.svg`)
+        downloadBlob(await exportSvg(doc, { transparent: wantTransparent }), `${base}.svg`)
       }
-      // سند همیشه به‌صورت .pelc هم ذخیره می‌شود
+      // سند همیشه به‌صورت .pelc هم ذخیره می‌شود (با پس‌زمینهٔ خودِ سند)
       downloadBlob(pelc, `${base}.pelc`)
-      toast({ title: "ذخیره شد", description: `${FORMATS.find((f) => f.id === format)?.label} + فایل پروژهٔ ‎.pelc` })
+      toast({
+        title: "ذخیره شد",
+        description: `${FORMATS.find((f) => f.id === format)?.label} + فایل پروژهٔ ‎.pelc${wantTransparent ? " — پس‌زمینهٔ شفاف" : ""}`,
+      })
       onOpenChange(false)
     } catch (e) {
       toast({
@@ -102,6 +108,45 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               <span className="mt-0.5 block text-xs text-muted-foreground">{f.hint}</span>
             </button>
           ))}
+        </div>
+
+        {/* ---------- پرسش پس‌زمینهٔ شفاف ---------- */}
+        <div className="space-y-2 rounded-lg border-2 border-dashed border-chart-2/50 bg-chart-2/5 p-3">
+          <Label className="text-sm font-semibold">می‌خواهی کل پروژه با پس‌زمینهٔ شفاف ذخیره شود؟</Label>
+          <p className="text-xs leading-5 text-muted-foreground">
+            پس‌زمینهٔ شفاف برای استفاده روی پوستر و ترکیب با تصاویر دیگر مناسب است. قالب‌های PNG و SVG شفافیت را
+            نگه می‌دارند؛ JPG شفافیت ندارد و روی سفید ذخیره می‌شود.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setTransparentBg(false)}
+              className={cn(
+                "rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors",
+                transparentBg === false ? "border-primary bg-accent" : "bg-card hover:bg-accent/50",
+              )}
+            >
+              نه — با پس‌زمینهٔ سند
+            </button>
+            <button
+              type="button"
+              onClick={() => setTransparentBg(true)}
+              className={cn(
+                "rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors",
+                transparentBg === true ? "border-primary bg-accent" : "bg-card hover:bg-accent/50",
+              )}
+            >
+              بله — شفاف (پوستر)
+            </button>
+          </div>
+          {format === "JPG" && transparentBg === true && (
+            <p className="text-xs font-medium text-chart-2">
+              JPG شفافیت ندارد؛ خروجی روی پس‌زمینهٔ سفید ذخیره می‌شود. برای شفاف واقعی PNG یا SVG را انتخاب کنید.
+            </p>
+          )}
+          <p className="text-[11px] leading-4 text-muted-foreground">
+            این انتخاب فقط روی فایل خروجی اعمال می‌شود؛ پروژهٔ ‎.pelc پس‌زمینهٔ خود سند را نگه می‌دارد.
+          </p>
         </div>
 
         {(format === "PNG" || format === "JPG") && (

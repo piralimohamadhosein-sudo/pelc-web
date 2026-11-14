@@ -20,9 +20,10 @@ import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, findLayer } from "@/lib/pelc/model"
 import { buildTextSegments } from "@/lib/pelc/segments"
 import { tokenizeWords } from "@/lib/pelc/measure"
+import { letterClusters } from "@/lib/pelc/arabicText"
 import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
-import { SplitSquareHorizontal } from "lucide-react"
+import { Scissors, SplitSquareHorizontal } from "lucide-react"
 
 const MIN_SCALE_FRACTION = 0.86 // بیشینهٔ عرض نسبی سند داخل مرحله
 
@@ -33,6 +34,7 @@ export function EditorCanvas() {
   const beginLiveUpdate = useEditorStore((s) => s.beginLiveUpdate)
   const commitLiveUpdate = useEditorStore((s) => s.commitLiveUpdate)
   const splitLayerIntoWords = useEditorStore((s) => s.splitLayerIntoWords)
+  const splitLayerIntoSegments = useEditorStore((s) => s.splitLayerIntoSegments)
   const nudgeSelectedLayer = useEditorStore((s) => s.nudgeSelectedLayer)
   const setViewScale = useEditorStore((s) => s.setViewScale)
   const viewScale = useEditorStore((s) => s.viewScale)
@@ -135,6 +137,7 @@ export function EditorCanvas() {
 
   const selectedLayer = findLayer(doc, selectedLayerId)
   const canSplit = Boolean(selectedLayer?.text && tokenizeWords(selectedLayer.text.text).length >= 2)
+  const canSegment = Boolean(selectedLayer?.text && letterClusters(selectedLayer.text.text).length >= 2)
 
   const docW = doc.canvas.width * viewScale
   const docH = doc.canvas.height * viewScale
@@ -234,6 +237,16 @@ export function EditorCanvas() {
         >
           <SplitSquareHorizontal className="size-4" />
           تبدیل به کلماتِ مستقل
+        </button>
+        <button
+          type="button"
+          disabled={!canSegment}
+          onClick={() => selectedLayerId && splitLayerIntoSegments(selectedLayerId)}
+          className="flex items-center gap-1.5 rounded-lg border border-amber-300/30 bg-black/45 px-3 py-1.5 text-xs font-medium text-amber-100 shadow-sm transition-colors hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-40"
+          title="هر حرف و کشیدهٔ واژه به یک بخشِ مستقل با همان فرم تبدیل می‌شود تا جداگانه تکان بخورد"
+        >
+          <Scissors className="size-4" />
+          تبدیل به بخش‌های کوچک‌تر
         </button>
       </div>
 
