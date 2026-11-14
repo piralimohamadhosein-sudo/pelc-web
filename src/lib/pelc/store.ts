@@ -53,8 +53,10 @@ interface EditorState {
   canUndo: boolean
   canRedo: boolean
   labels: string[]
-  /** شناسهٔ لایهٔ انتخاب‌شده */
+  /** شناسهٔ لایهٔ انتخاب‌شده (انتخاب اصلی — پنل‌ها با همین کار می‌کنند) */
   selectedLayerId: string | null
+  /** انتخاب چندگانه: شناسهٔ همهٔ لایه‌های انتخاب‌شده (خالی = انتخاب تکی) */
+  selectedLayerIds: string[]
   /** اندیس UTF-16 آغازِ کلاستر حرف انتخاب‌شده (یا null) */
   selectedClusterStart: number | null
   activeTab: PanelTab
@@ -65,6 +67,10 @@ interface EditorState {
 
   /* --- انتخاب --- */
   selectLayer: (id: string) => void
+  /** انتخاب همهٔ لایه‌ها برای جابه‌جایی گروهی راحت */
+  selectAllLayers: () => void
+  /** لغو انتخاب چندگانه */
+  clearMultiSelect: () => void
   selectLetter: (clusterStart: number | null) => void
   setActiveTab: (tab: PanelTab) => void
   setViewScale: (scale: number) => void
@@ -135,6 +141,8 @@ function syncFromHistory(
   const h = history!
   const sel = get().selectedLayerId
   const layer = doc.layers.some((l) => l.id === sel) ? sel : (doc.layers[0]?.id ?? null)
+  // حفظ انتخاب چندگانهٔ معتبر — شناسه‌های حذف‌شده کنار می‌روند
+  const multi = get().selectedLayerIds.filter((id) => doc.layers.some((l) => l.id === id))
   const keepStart = get().selectedClusterStart
   let nextStart = keepStart
   if (keepStart !== null) {
@@ -151,6 +159,7 @@ function syncFromHistory(
     canRedo: h.canRedo,
     labels: h.labels(),
     selectedLayerId: layer,
+    selectedLayerIds: multi,
     selectedClusterStart: nextStart,
   })
 }
@@ -218,12 +227,20 @@ export const useEditorStore = create<EditorState>((set, get) => {
     canRedo: false,
     labels: [],
     selectedLayerId: initialDoc.layers[0]?.id ?? null,
+    selectedLayerIds: [],
     selectedClusterStart: null,
     activeTab: "word",
     stressResult: null,
     viewScale: 0.12,
 
-    selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null }),
+    selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null, selectedLayerIds: [] }),
+    selectAllLayers: () =>
+      set({
+        // لایه‌های قفل‌شده را نمی‌شود کشید؛ در انتخاب‌همه نمی‌آیند
+        selectedLayerIds: get().doc.layers.filter((l) => !l.locked).map((l) => l.id),
+        selectedClusterStart: null,
+      }),
+    clearMultiSelect: () => set({ selectedLayerIds: [] }),
     selectLetter: (clusterStart) => set({ selectedClusterStart: clusterStart }),
     setActiveTab: (tab) => set({ activeTab: tab }),
     setViewScale: (scale) => set({ viewScale: scale }),
@@ -306,13 +323,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const layer = newLayer(`لایهٔ ${state.doc.layers.length + 1}`)
       const next: PelcDocument = { ...state.doc, layers: [...state.doc.layers, layer] }
       state.commit(next, "افزودن لایه")
-      set({ selectedLayerId: layer.id, selectedClusterStart: null, activeTab: "word" })
+      set({ selectedLayerId: layer.id, selectedClusterStart: null, selectedLayerIds: [], activeTab: "word" })
     },
     deleteLayer: (id) => {
       const state = get()
       if (state.doc.layers.length <= 1) return
       const next: PelcDocument = { ...state.doc, layers: state.doc.layers.filter((l) => l.id !== id) }
       state.commit(next, "حذف لایه")
+      set({ selectedLayerIds: state.selectedLayerIds.filter((x) => x !== id) })
     },
     duplicateLayer: (id) => {
       const state = get()
@@ -325,7 +343,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const layers = [...state.doc.layers]
       layers.splice(idx + 1, 0, copy)
       state.commit({ ...state.doc, layers }, "تکثیر لایه")
-      set({ selectedLayerId: copy.id, selectedClusterStart: null })
+      set({ selectedLayerId: copy.id, selectedClusterStart: null, selectedLayerIds: [] })
     },
 
     splitLayerIntoWords: (id) => {
@@ -358,12 +376,26 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const layers = [...state.doc.layers]
       layers.splice(idx, 1, ...wordLayers)
       state.commit({ ...state.doc, layers }, "تبدیل جمله به کلماتِ مستقل")
-      set({ selectedLayerId: wordLayers[0].id, selectedClusterStart: null })
+      set({ selectedLayerId: wordLayers[0].id, selectedClusterStart: null, selectedLayerIds: [] })
       return true
     },
 
     nudgeSelectedLayer: (dx, dy) => {
       const state = get()
+      // انتخاب چندگانه فعال است: همه با هم تکان می‌خورند (یک گام تاریخچه)
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) =>
+            ids.has(l.id) && !l.locked
+              ? { ...l, transform: { ...l.transform, tx: l.transform.tx + dx, ty: l.transform.ty + dy } }
+              : l,
+          ),
+        }
+        state.commit(next, "تکان‌دادن همهٔ لایه‌ها", "nudge:multi")
+        return
+      }
       const layer = findLayer(state.doc, state.selectedLayerId)
       if (!layer) return
       const next = withLayer(state.doc, layer.id, (l) => ({
@@ -497,6 +529,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
         canRedo: false,
         labels: [],
         selectedLayerId: doc.layers[0]?.id ?? null,
+        selectedLayerIds: [],
         selectedClusterStart: null,
         activeTab: "word",
         stressResult: null,

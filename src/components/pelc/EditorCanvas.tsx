@@ -11,6 +11,8 @@
  *
  * هر کلمهٔ جمله می‌تواند به لایهٔ مستقل تبدیل شود (دکمهٔ «تبدیل به کلماتِ
  * مستقل») و بعد هر کلمه جداگانه کشیده شود یا با جهت‌نماها تکان بخورد.
+ * دکمهٔ بیضی زرد «انتخاب همه» همهٔ لایه‌ها را انتخاب می‌کند تا با یک کشیدن
+ * همه با هم جابه‌جا شوند؛ Esc یا کلیک روی فضای خالی بوم انتخاب را لغو می‌کند.
  * کشیدن لایه به‌صورت زنده (بدون تاریخچه) پیش‌نمایش می‌شود و در پایان یک‌جا
  * ثبت می‌گردد.
  */
@@ -22,14 +24,17 @@ import { buildTextSegments } from "@/lib/pelc/segments"
 import { tokenizeWords } from "@/lib/pelc/measure"
 import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
-import { SplitSquareHorizontal } from "lucide-react"
+import { BoxSelect, SplitSquareHorizontal } from "lucide-react"
 
 const MIN_SCALE_FRACTION = 0.86 // بیشینهٔ عرض نسبی سند داخل مرحله
 
 export function EditorCanvas() {
   const doc = useEditorStore((s) => s.doc)
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId)
+  const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds)
   const selectLayer = useEditorStore((s) => s.selectLayer)
+  const selectAllLayers = useEditorStore((s) => s.selectAllLayers)
+  const clearMultiSelect = useEditorStore((s) => s.clearMultiSelect)
   const beginLiveUpdate = useEditorStore((s) => s.beginLiveUpdate)
   const commitLiveUpdate = useEditorStore((s) => s.commitLiveUpdate)
   const splitLayerIntoWords = useEditorStore((s) => s.splitLayerIntoWords)
@@ -39,11 +44,11 @@ export function EditorCanvas() {
 
   const stageRef = useRef<HTMLDivElement>(null)
   const dragState = useRef<{
-    layerId: string
+    grabbedId: string
     startX: number
     startY: number
-    baseTx: number
-    baseTy: number
+    /** موقعیت پایهٔ همهٔ لایه‌هایی که با این کشیدن جابه‌جا می‌شوند (تکی یا گروهی) */
+    bases: { id: string; tx: number; ty: number }[]
     moved: boolean
   } | null>(null)
 
@@ -68,6 +73,14 @@ export function EditorCanvas() {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
       if (target && (target.closest("input, textarea, select") || target.isContentEditable)) return
+      // Esc = لغو انتخاب چندگانه
+      if (e.key === "Escape") {
+        if (useEditorStore.getState().selectedLayerIds.length > 0) {
+          e.preventDefault()
+          clearMultiSelect()
+        }
+        return
+      }
       const step = e.shiftKey ? 10 : 1
       const moves: Record<string, [number, number]> = {
         ArrowLeft: [-step, 0],
@@ -77,28 +90,36 @@ export function EditorCanvas() {
       }
       const move = moves[e.key]
       if (!move) return
-      if (!useEditorStore.getState().selectedLayerId) return
+      const st = useEditorStore.getState()
+      if (!st.selectedLayerId && st.selectedLayerIds.length === 0) return
       e.preventDefault()
       nudgeSelectedLayer(move[0], move[1])
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [nudgeSelectedLayer])
+  }, [nudgeSelectedLayer, clearMultiSelect])
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent, layerId: string) => {
       const layer = findLayer(doc, layerId)
       if (!layer || layer.locked) return
       e.currentTarget.setPointerCapture(e.pointerId)
+      // اگر لایهٔ گرفته‌شده جزو انتخاب چندگانه است، همهٔ انتخاب‌شده‌ها با هم کشیده می‌شوند
+      const multiIds = useEditorStore.getState().selectedLayerIds
+      const groupMove = multiIds.length > 1 && multiIds.includes(layerId)
+      const bases = groupMove
+        ? doc.layers
+            .filter((l) => multiIds.includes(l.id) && !l.locked)
+            .map((l) => ({ id: l.id, tx: l.transform.tx, ty: l.transform.ty }))
+        : [{ id: layerId, tx: layer.transform.tx, ty: layer.transform.ty }]
       dragState.current = {
-        layerId,
+        grabbedId: layerId,
         startX: e.clientX,
         startY: e.clientY,
-        baseTx: layer.transform.tx,
-        baseTy: layer.transform.ty,
+        bases,
         moved: false,
       }
-      selectLayer(layerId)
+      if (!groupMove) selectLayer(layerId)
     },
     [doc, selectLayer],
   )
@@ -112,15 +133,15 @@ export function EditorCanvas() {
       const dyDoc = (e.clientY - d.startY) / scale
       if (Math.abs(e.clientX - d.startX) + Math.abs(e.clientY - d.startY) > 3) d.moved = true
       if (!d.moved) return
-      const next = findLayer(doc, d.layerId)
-      if (!next) return
+      const baseById = new Map(d.bases.map((b) => [b.id, b]))
       const updated = {
         ...doc,
-        layers: doc.layers.map((l) =>
-          l.id === d.layerId
-            ? { ...l, transform: { ...l.transform, tx: Math.round(d.baseTx + dxDoc), ty: Math.round(d.baseTy + dyDoc) } }
-            : l,
-        ),
+        layers: doc.layers.map((l) => {
+          const b = baseById.get(l.id)
+          return b
+            ? { ...l, transform: { ...l.transform, tx: Math.round(b.tx + dxDoc), ty: Math.round(b.ty + dyDoc) } }
+            : l
+        }),
       }
       beginLiveUpdate(updated)
     },
@@ -130,7 +151,7 @@ export function EditorCanvas() {
   const onPointerUp = useCallback(() => {
     const d = dragState.current
     dragState.current = null
-    if (d?.moved) commitLiveUpdate("جابه‌جایی لایه")
+    if (d?.moved) commitLiveUpdate(d.bases.length > 1 ? "جابه‌جایی گروهی لایه‌ها" : "جابه‌جایی لایه")
   }, [commitLiveUpdate])
 
   const selectedLayer = findLayer(doc, selectedLayerId)
@@ -144,6 +165,10 @@ export function EditorCanvas() {
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div
           className={`pelc-doc relative ${doc.background.transparent ? "pelc-checkerboard" : ""}`}
+          onPointerDown={(e) => {
+            // کلیک روی فضای خالی سند = لغو انتخاب چندگانه
+            if (e.target === e.currentTarget && selectedLayerIds.length > 0) clearMultiSelect()
+          }}
           style={{
             width: docW,
             height: docH,
@@ -153,7 +178,7 @@ export function EditorCanvas() {
           {doc.layers.map((layer) => {
             if (!layer.visible) return null
             const t = layer.text
-            const selected = layer.id === selectedLayerId
+            const selected = layer.id === selectedLayerId || selectedLayerIds.includes(layer.id)
             const st = layer.style
             const gold = st.gold?.enabled === true
 
@@ -227,6 +252,21 @@ export function EditorCanvas() {
       <div className="absolute start-2 top-2 flex items-center gap-2">
         <button
           type="button"
+          onClick={() => (selectedLayerIds.length > 0 ? clearMultiSelect() : selectAllLayers())}
+          className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold shadow-sm transition-colors ${
+            selectedLayerIds.length > 0
+              ? "border-yellow-600 bg-yellow-300 text-stone-900 hover:bg-yellow-200"
+              : "border-yellow-600/60 bg-yellow-400 text-stone-900 hover:bg-yellow-300"
+          }`}
+          title="همهٔ لایه‌ها انتخاب می‌شوند تا با یک کشیدن همه با هم جابه‌جا شوند (Esc = لغو)"
+        >
+          <BoxSelect className="size-4" />
+          {selectedLayerIds.length > 0
+            ? `لغو انتخاب (${selectedLayerIds.length.toLocaleString("fa-IR")})`
+            : "انتخاب همه"}
+        </button>
+        <button
+          type="button"
           disabled={!canSplit}
           onClick={() => selectedLayerId && splitLayerIntoWords(selectedLayerId)}
           className="flex items-center gap-1.5 rounded-lg border border-amber-300/30 bg-black/45 px-3 py-1.5 text-xs font-medium text-amber-100 shadow-sm transition-colors hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-40"
@@ -245,7 +285,11 @@ export function EditorCanvas() {
         <span dir="ltr">
           {doc.canvas.width} × {doc.canvas.height} · {doc.canvas.dpi}dpi · {Math.round(viewScale * 100)}%
         </span>
-        <span className="ms-2">· لایه را بکشید یا با جهت‌نما تکان دهید</span>
+        <span className="ms-2">
+          {selectedLayerIds.length > 1
+            ? `· ${selectedLayerIds.length.toLocaleString("fa-IR")} لایه انتخاب شد — همه با هم جابه‌جا می‌شوند`
+            : "· لایه را بکشید یا با جهت‌نما تکان دهید"}
+        </span>
       </div>
     </div>
   )
