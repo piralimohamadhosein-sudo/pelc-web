@@ -184,10 +184,6 @@ function markTitle(type: MarkType): string {
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
-  // قلاب آزمون مرورگری: دسترسی مستقیم استور در کنسول برای عیب‌یابی
-  if (typeof window !== "undefined") {
-    (window as unknown as Record<string, unknown>).__pelcStore = useEditorStore
-  }
   /** اعمال جهش متن با بازنگاشت perLetter و پیگیری انتخاب حرف */
   const commitTextMutation = (mutation: TextMutation, label: string, extraPerLetter?: Record<string, LetterOverride>) => {
     const state = get()
@@ -274,7 +270,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           const d = h.undo()
           if (d === null) { ok = false; break }
         }
-        const backToBase = h.current === h["base"] || h.position === 0
+        const backToBase = h.position === 0
         set({
           stressResult: `موفق: ۵۰۰ گام در ${elapsed} میلی‌ثانیه ثبت شد (ظرفیت ${DEFAULT_CAPACITY}). واگرد کامل تا سند آغازین: ${ok && backToBase ? "بله" : "خیر"}`,
         })
@@ -616,3 +612,11 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
   }
 })
+
+// قلاب آزمون مرورگری: دسترسی مستقیم استور در کنسول برای عیب‌یابی.
+// باید «بعد از» ساخت استور اجرا شود؛ نوشتنش داخل initializer تابع create
+// به خطای «Cannot access 'useEditorStore' before initialization» می‌انجامد،
+// چون create فراخوانِ initializer را پیش از پایان انتساب const اجرا می‌کند.
+if (typeof window !== "undefined") {
+  ;(window as unknown as Record<string, unknown>).__pelcStore = useEditorStore
+}
