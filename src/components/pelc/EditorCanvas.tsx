@@ -25,6 +25,7 @@ import { tokenizeWords } from "@/lib/pelc/measure"
 import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
 import { BoxSelect, SplitSquareHorizontal } from "lucide-react"
+import { GroupScaleBar } from "@/components/pelc/GroupScaleBar"
 
 const MIN_SCALE_FRACTION = 0.86 // بیشینهٔ عرض نسبی سند داخل مرحله
 
@@ -276,6 +277,9 @@ export function EditorCanvas() {
           تبدیل به کلماتِ مستقل
         </button>
       </div>
+
+      {/* نوار مقیاس گروهی — فقط با انتخاب چندگانه ظاهر می‌شود */}
+      <GroupScaleBar />
 
       {/* نوار وضعیت بوم */}
       <div
