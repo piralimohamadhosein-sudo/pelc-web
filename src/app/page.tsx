@@ -10,11 +10,12 @@ import { EditorCanvas } from "@/components/pelc/EditorCanvas"
 import { Panels } from "@/components/pelc/Panels"
 import { SaveDialog } from "@/components/pelc/SaveDialog"
 import { AboutDialog } from "@/components/pelc/AboutDialog"
-import { WelcomeDialog } from "@/components/pelc/WelcomeDialog"
+import { WelcomeDialog, WELCOME_SEEN_KEY } from "@/components/pelc/WelcomeDialog"
+import { SupportDialog } from "@/components/pelc/SupportDialog"
 import { useEditorStore } from "@/lib/pelc/store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Undo2, Redo2, Save, Info, PenTool } from "lucide-react"
+import { Undo2, Redo2, Save, Info, MessageCircle, PenTool } from "lucide-react"
 
 export default function Home() {
   const doc = useEditorStore((s) => s.doc)
@@ -26,12 +27,36 @@ export default function Home() {
   const hydrateFavoriteFonts = useEditorStore((s) => s.hydrateFavoriteFonts)
   const [saveOpen, setSaveOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
-  // پیام خوش‌آمد هر بار هنگام باز شدن برنامه می‌آید و با «شروع کنیم» می‌رود
-  const [welcomeOpen, setWelcomeOpen] = useState(true)
+  const [supportOpen, setSupportOpen] = useState(false)
+  // پیام خوش‌آمد فقط بار اول نمایش داده می‌شود؛ پس از بستن در localStorage ثبت می‌شود
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
+
+  const handleWelcomeOpenChange = (v: boolean) => {
+    setWelcomeOpen(v)
+    if (!v && typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(WELCOME_SEEN_KEY, "1")
+      } catch {
+        /* حافظه در دسترس نیست — فقط برای همین نشست بسته می‌شود */
+      }
+    }
+  }
 
   // خواندن فونت‌های ستاره‌دار از localStorage — فقط سمت مرورگر، پس از هیدراسیون
   useEffect(() => {
     hydrateFavoriteFonts()
+    // پیام خوش‌آمد فقط وقتی باز می‌شود که قبلاً دیده نشده باشد — با یک تیک تأخیر
+    // تا setState همزمان با بدنهٔ اثر، رندر آبشاری نسازد.
+    const t = window.setTimeout(() => {
+      let seen = false
+      try {
+        seen = window.localStorage.getItem(WELCOME_SEEN_KEY) === "1"
+      } catch {
+        seen = false
+      }
+      if (!seen) setWelcomeOpen(true)
+    }, 0)
+    return () => window.clearTimeout(t)
   }, [hydrateFavoriteFonts])
 
   // میان‌برهای صفحه‌کلید: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
@@ -65,7 +90,6 @@ export default function Home() {
           </span>
           <div className="leading-tight">
             <p className="text-sm font-bold">پلک</p>
-            <p className="text-[10px] text-muted-foreground">نسخهٔ آزمایشی وب — فاز ۱</p>
           </div>
         </div>
 
@@ -85,6 +109,9 @@ export default function Home() {
           </Button>
           <Button size="sm" onClick={() => setSaveOpen(true)}>
             <Save className="size-4" /> ذخیره
+          </Button>
+          <Button variant="outline" size="sm" aria-label="پشتیبانی" onClick={() => setSupportOpen(true)}>
+            <MessageCircle className="size-4" /> پشتیبانی
           </Button>
           <Button variant="ghost" size="icon" aria-label="دربارهٔ نسخهٔ وب" onClick={() => setAboutOpen(true)}>
             <Info className="size-4" />
@@ -107,7 +134,8 @@ export default function Home() {
 
       <SaveDialog open={saveOpen} onOpenChange={setSaveOpen} />
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
-      <WelcomeDialog open={welcomeOpen} onOpenChange={setWelcomeOpen} />
+      <WelcomeDialog open={welcomeOpen} onOpenChange={handleWelcomeOpenChange} />
+      <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
     </div>
   )
 }

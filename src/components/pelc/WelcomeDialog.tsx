@@ -1,8 +1,9 @@
 "use client"
 
 /**
- * گفت‌وگوی خوش‌آمد — هنگام باز شدن برنامه نمایش داده می‌شود و با دکمهٔ
- * «شروع کنیم» (یا Esc / کلیک بیرون) بسته می‌شود.
+ * گفت‌وگوی خوش‌آمد — فقط بار اول باز شدن برنامه نمایش داده می‌شود؛ پس از بستن
+ * کلید WELCOME_SEEN_KEY در localStorage ثبت می‌شود تا دوباره نیاید.
+ * اطلاعات طراح و پشتیبانی به گفت‌وگوی «پشتیبانی» (SupportDialog) منتقل شده است.
  */
 
 import { PenTool } from "lucide-react"
@@ -14,6 +15,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+
+/** کلید localStorage: اگر «۱» باشد، پیام خوش‌آمد دیگر نمایش داده نمی‌شود */
+export const WELCOME_SEEN_KEY = "pelc-welcome-seen"
 
 export function WelcomeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
@@ -31,24 +35,6 @@ export function WelcomeDialog({ open, onOpenChange }: { open: boolean; onOpenCha
             به‌صورت PSD لایه‌باز یا JPG تحویل بگیرید.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-1 rounded-lg border bg-accent/40 p-3 text-center text-xs leading-5 text-muted-foreground">
-          <p>
-            طراح و سازنده: <span className="font-semibold text-foreground">محمد حسین پیرعلی</span>
-          </p>
-          <p>
-            تلگرام / پشتیبانی:{" "}
-            <a
-              href="https://t.me/MohammadhosseinP"
-              target="_blank"
-              rel="noreferrer"
-              dir="ltr"
-              className="font-medium text-primary underline underline-offset-4"
-            >
-              @MohammadhosseinP
-            </a>
-          </p>
-        </div>
 
         <p className="text-center text-sm font-semibold">شروع کنیم؟</p>
         <Button onClick={() => onOpenChange(false)} className="w-full">
