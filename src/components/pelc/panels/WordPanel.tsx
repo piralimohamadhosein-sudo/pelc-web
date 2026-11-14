@@ -76,6 +76,15 @@ export function WordPanel() {
 
       <section className="space-y-2">
         <Label className="text-sm font-semibold">قلم</Label>
+        {isMultiSelect && (
+          <p className="rounded-md border border-primary/40 bg-accent/40 px-2.5 py-1.5 text-xs leading-5">
+            «انتخاب همه» فعال است — با انتخاب یک قلم، قلم همهٔ{' '}
+            <span dir="ltr" className="font-semibold">
+              {selectedLayerIds.length.toLocaleString("fa-IR")}
+            </span>{' '}
+            لایهٔ انتخاب‌شده با هم عوض می‌شود.
+          </p>
+        )}
         <FontPicker value={t.fontId} onChange={setLayerFont} ariaLabel="قلم لایه" />
         <p className="text-[11px] leading-4 text-muted-foreground">
           با ستارهٔ کنار هر فونت، آن را به علاقه‌مندی‌ها بیفزایید؛ ستاره‌دارها بالای فهرست می‌آیند.

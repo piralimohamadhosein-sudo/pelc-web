@@ -458,8 +458,23 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setLayerFont: (fontId) => {
       const state = get()
+      if (!PELC_FONT_IDS.has(fontId)) return
+      // انتخاب چندگانه فعال است («انتخاب همه»): یک قلم روی همهٔ لایه‌های
+      // انتخاب‌شده اعمال می‌شود؛ لایه‌های قفل‌شده و بی‌متن مستثنا هستند —
+      // همان الگوی رنگ گروهی، یک گام تاریخچه با کلید ادغام.
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) =>
+            ids.has(l.id) && !l.locked && l.text ? { ...l, text: { ...l.text, fontId } } : l,
+          ),
+        }
+        state.commit(next, "قلم همهٔ لایه‌های انتخاب‌شده", "font:multi")
+        return
+      }
       const layer = findLayer(state.doc, state.selectedLayerId)
-      if (!layer || !PELC_FONT_IDS.has(fontId)) return
+      if (!layer) return
       const next = withLayer(state.doc, layer.id, (l) =>
         l.text ? { ...l, text: { ...l.text, fontId } } : l,
       )
