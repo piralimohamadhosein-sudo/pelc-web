@@ -536,6 +536,19 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setFillMode: (mode) => {
       const state = get()
+      // انتخاب چندگانه فعال است («انتخاب همه»): حالت پرکردن روی همهٔ لایه‌های
+      // انتخاب‌شده اعمال می‌شود؛ لایه‌های قفل‌شده مستثنا هستند.
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) =>
+            ids.has(l.id) && !l.locked ? { ...l, style: { ...l.style, fillMode: mode } } : l,
+          ),
+        }
+        state.commit(next, "حالت پرکردن همهٔ لایه‌ها", "fill:multi")
+        return
+      }
       const layer = findLayer(state.doc, state.selectedLayerId)
       if (!layer) return
       const next = withLayer(state.doc, layer.id, (l) => ({ ...l, style: { ...l.style, fillMode: mode } }))
@@ -543,6 +556,17 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setStrokeWidth: (w) => {
       const state = get()
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) =>
+            ids.has(l.id) && !l.locked ? { ...l, style: { ...l.style, strokeWidth: w } } : l,
+          ),
+        }
+        state.commit(next, "ضخامت خط دور همهٔ لایه‌ها", "stroke:multi")
+        return
+      }
       const layer = findLayer(state.doc, state.selectedLayerId)
       if (!layer) return
       const next = withLayer(state.doc, layer.id, (l) => ({ ...l, style: { ...l.style, strokeWidth: w } }))
@@ -550,20 +574,50 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     setGold: (enabled) => {
       const state = get()
-      const layer = findLayer(state.doc, state.selectedLayerId)
-      if (!layer) return
-      const next = withLayer(state.doc, layer.id, (l) => ({
+      const applyGold = (l: Layer): Layer => ({
         ...l,
         style: {
           ...l.style,
           fillMode: enabled ? "GOLD" : l.style.fillMode === "GOLD" ? "SOLID" : l.style.fillMode,
           gold: { enabled, innerColor: 0xffffd700, outerColor: 0xff8a5a00 },
         },
-      }))
+      })
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) => (ids.has(l.id) && !l.locked ? applyGold(l) : l)),
+        }
+        state.commit(
+          next,
+          enabled ? "افکت طلایی همهٔ لایه‌ها روشن" : "افکت طلایی همهٔ لایه‌ها خاموش",
+          "gold:multi",
+        )
+        return
+      }
+      const layer = findLayer(state.doc, state.selectedLayerId)
+      if (!layer) return
+      const next = withLayer(state.doc, layer.id, applyGold)
       state.commit(next, enabled ? "افکت طلایی روشن" : "افکت طلایی خاموش")
     },
     setShadow: (enabled) => {
       const state = get()
+      if (state.selectedLayerIds.length > 1) {
+        const ids = new Set(state.selectedLayerIds)
+        const next: PelcDocument = {
+          ...state.doc,
+          layers: state.doc.layers.map((l) =>
+            ids.has(l.id) && !l.locked
+              ? {
+                  ...l,
+                  style: { ...l.style, shadow: enabled ? { radius: 24, dx: 0, dy: 12, color: 0x66000000 } : null },
+                }
+              : l,
+          ),
+        }
+        state.commit(next, enabled ? "سایهٔ همهٔ لایه‌ها روشن" : "سایهٔ همهٔ لایه‌ها خاموش", "shadow:multi")
+        return
+      }
       const layer = findLayer(state.doc, state.selectedLayerId)
       if (!layer) return
       const next = withLayer(state.doc, layer.id, (l) => ({

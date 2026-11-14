@@ -259,7 +259,7 @@ export function EditorCanvas() {
               ? "border-yellow-600 bg-yellow-300 text-stone-900 hover:bg-yellow-200"
               : "border-yellow-600/60 bg-yellow-400 text-stone-900 hover:bg-yellow-300"
           }`}
-          title="همهٔ لایه‌ها انتخاب می‌شوند؛ جابه‌جایی، مقیاس، رنگ و قلم با یک عمل روی همه اعمال می‌شود (Esc = لغو)"
+          title="همهٔ لایه‌ها انتخاب می‌شوند؛ جابه‌جایی، مقیاس، رنگ، قلم و حالت پرکردن با یک عمل روی همه اعمال می‌شود (Esc = لغو)"
         >
           <BoxSelect className="size-4" />
           {selectedLayerIds.length > 0
@@ -291,7 +291,7 @@ export function EditorCanvas() {
         </span>
         <span className="ms-2">
           {selectedLayerIds.length > 1
-            ? `· ${selectedLayerIds.length.toLocaleString("fa-IR")} لایه انتخاب شد — رنگ، قلم و جابه‌جایی روی همه اعمال می‌شود`
+            ? `· ${selectedLayerIds.length.toLocaleString("fa-IR")} لایه انتخاب شد — رنگ، قلم، پرکردن و جابه‌جایی روی همه اعمال می‌شود`
             : "· لایه را بکشید یا با جهت‌نما تکان دهید"}
         </span>
       </div>

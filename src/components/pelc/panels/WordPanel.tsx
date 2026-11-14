@@ -143,6 +143,15 @@ export function WordPanel() {
 
       <section className="space-y-3 rounded-lg border bg-card p-3">
         <Label className="text-sm font-semibold">حالت پرکردن</Label>
+        {isMultiSelect && (
+          <p className="rounded-md border border-primary/40 bg-accent/40 px-2.5 py-1.5 text-xs leading-5">
+            «انتخاب همه» فعال است — حالت پرکردن و افکت‌ها روی{' '}
+            <span dir="ltr" className="font-semibold">
+              {selectedLayerIds.length.toLocaleString("fa-IR")}
+            </span>{' '}
+            لایهٔ انتخاب‌شده با هم اعمال می‌شود.
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-2">
           {(
             [
