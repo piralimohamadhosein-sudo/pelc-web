@@ -10,6 +10,7 @@ import { EditorCanvas } from "@/components/pelc/EditorCanvas"
 import { Panels } from "@/components/pelc/Panels"
 import { SaveDialog } from "@/components/pelc/SaveDialog"
 import { AboutDialog } from "@/components/pelc/AboutDialog"
+import { WelcomeDialog } from "@/components/pelc/WelcomeDialog"
 import { useEditorStore } from "@/lib/pelc/store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,8 @@ export default function Home() {
   const hydrateFavoriteFonts = useEditorStore((s) => s.hydrateFavoriteFonts)
   const [saveOpen, setSaveOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
+  // پیام خوش‌آمد هر بار هنگام باز شدن برنامه می‌آید و با «شروع کنیم» می‌رود
+  const [welcomeOpen, setWelcomeOpen] = useState(true)
 
   // خواندن فونت‌های ستاره‌دار از localStorage — فقط سمت مرورگر، پس از هیدراسیون
   useEffect(() => {
@@ -104,6 +107,7 @@ export default function Home() {
 
       <SaveDialog open={saveOpen} onOpenChange={setSaveOpen} />
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+      <WelcomeDialog open={welcomeOpen} onOpenChange={setWelcomeOpen} />
     </div>
   )
 }
