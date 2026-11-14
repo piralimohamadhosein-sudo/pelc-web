@@ -11,10 +11,11 @@
 import { useEffect, useState } from "react"
 import { useEditorStore } from "@/lib/pelc/store"
 import { findLayer, LETTER_FORM_TITLES, type LetterForm } from "@/lib/pelc/model"
-import { fontById, PELC_FONTS } from "@/lib/pelc/fonts"
+import { fontById } from "@/lib/pelc/fonts"
 import { detectVariantTags, variantTagLabel } from "@/lib/pelc/variants"
 import { formAvailability } from "@/lib/pelc/arabicText"
 import { ClusterChips } from "./ClusterChips"
+import { FontPicker } from "@/components/pelc/FontPicker"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Info } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -119,20 +120,13 @@ export function LetterPanel() {
           {/* ---------- قلم این حرف ---------- */}
           <section className="space-y-2 rounded-lg border bg-card p-3">
             <p className="text-sm font-semibold">۳. قلم اختصاصی این حرف</p>
-            <select
-              dir="rtl"
+            <FontPicker
               value={activeLetterFont ?? ""}
-              onChange={(e) => setLetterFont(e.target.value === "" ? null : e.target.value)}
-              className="h-10 w-full rounded-lg border bg-card px-3 text-sm"
-              aria-label="قلم اختصاصی حرف"
-            >
-              <option value="">همان قلم لایه ({fontById(fontId).displayName})</option>
-              {PELC_FONTS.filter((f) => f.id !== fontId).map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.displayName} — {f.style}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setLetterFont(v === "" ? null : v)}
+              noneValue=""
+              noneLabel={`همان قلم لایه (${fontById(fontId).displayName})`}
+              ariaLabel="قلم اختصاصی حرف"
+            />
             <p className="text-xs leading-5 text-muted-foreground">
               حرف با فونت دیگر، طبیعتاً از اتصال واژه جدا می‌افتد؛ بعدش می‌توانید با کشیده یا جابه‌جایی دستی در بیلد
               اندروید نزدیکش کنید.

@@ -5,7 +5,7 @@
 import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, COLOR_SWATCHES, findLayer } from "@/lib/pelc/model"
 import { tokenizeWords } from "@/lib/pelc/measure"
-import { PELC_FONTS } from "@/lib/pelc/fonts"
+import { FontPicker } from "@/components/pelc/FontPicker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
@@ -72,22 +72,11 @@ export function WordPanel() {
       )}
 
       <section className="space-y-2">
-        <Label htmlFor="layer-font" className="text-sm font-semibold">
-          قلم
-        </Label>
-        <select
-          id="layer-font"
-          dir="rtl"
-          value={t.fontId}
-          onChange={(e) => setLayerFont(e.target.value)}
-          className="h-10 w-full rounded-lg border bg-card px-3 text-sm"
-        >
-          {PELC_FONTS.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.displayName} — {f.style} ({f.license})
-            </option>
-          ))}
-        </select>
+        <Label className="text-sm font-semibold">قلم</Label>
+        <FontPicker value={t.fontId} onChange={setLayerFont} ariaLabel="قلم لایه" />
+        <p className="text-[11px] leading-4 text-muted-foreground">
+          با ستارهٔ کنار هر فونت، آن را به علاقه‌مندی‌ها بیفزایید؛ ستاره‌دارها بالای فهرست می‌آیند.
+        </p>
       </section>
 
       <section>

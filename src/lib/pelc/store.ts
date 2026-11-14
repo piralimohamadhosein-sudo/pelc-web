@@ -41,6 +41,9 @@ import { PELC_FONTS } from "./fonts"
 
 const PELC_FONT_IDS = new Set(PELC_FONTS.map((f) => f.id))
 
+/** کلید localStorage برای فونت‌های ستاره‌دار (علاقه‌مندی) */
+const FAVORITES_KEY = "pelc-favorite-fonts"
+
 export type PanelTab = "layers" | "word" | "letter" | "kashida" | "marks" | "history"
 
 interface EditorState {
@@ -64,6 +67,8 @@ interface EditorState {
   stressResult: string | null
   /** ضریب نمایش فعلی بوم (برای اندازه‌گیری‌های DOM) */
   viewScale: number
+  /** فونت‌های ستاره‌دار (علاقه‌مندی کاربر) — بیرون از سند و تاریخچه */
+  favoriteFontIds: string[]
 
   /* --- انتخاب --- */
   selectLayer: (id: string) => void
@@ -74,6 +79,10 @@ interface EditorState {
   selectLetter: (clusterStart: number | null) => void
   setActiveTab: (tab: PanelTab) => void
   setViewScale: (scale: number) => void
+  /** ستاره‌زدن/برداشتن ستارهٔ یک فونت */
+  toggleFavoriteFont: (id: string) => void
+  /** خواندن علاقه‌مندی‌ها از localStorage — فقط سمت مرورگر، یک‌بار هنگام راه‌اندازی */
+  hydrateFavoriteFonts: () => void
 
   /* --- تاریخچه --- */
   undo: () => void
@@ -232,6 +241,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
     activeTab: "word",
     stressResult: null,
     viewScale: 0.12,
+    favoriteFontIds: [],
 
     selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null, selectedLayerIds: [] }),
     selectAllLayers: () =>
@@ -244,6 +254,36 @@ export const useEditorStore = create<EditorState>((set, get) => {
     selectLetter: (clusterStart) => set({ selectedClusterStart: clusterStart }),
     setActiveTab: (tab) => set({ activeTab: tab }),
     setViewScale: (scale) => set({ viewScale: scale }),
+    toggleFavoriteFont: (id) => {
+      if (!PELC_FONT_IDS.has(id)) return
+      const cur = get().favoriteFontIds
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
+        } catch {
+          /* حافظه در دسترس نیست (مثلاً حالت خصوصی) — فقط در حافظهٔ نشست */
+        }
+      }
+      set({ favoriteFontIds: next })
+    },
+    hydrateFavoriteFonts: () => {
+      if (typeof window === "undefined") return
+      try {
+        const raw = window.localStorage.getItem(FAVORITES_KEY)
+        if (!raw) return
+        const parsed: unknown = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return
+        // فقط شناسه‌های معتبر مخزن قلم پذیرفته می‌شوند
+        set({
+          favoriteFontIds: parsed.filter(
+            (x): x is string => typeof x === "string" && PELC_FONT_IDS.has(x),
+          ),
+        })
+      } catch {
+        /* دادهٔ خراب — نادیده گرفته می‌شود */
+      }
+    },
 
     undo: () => {
       const h = ensureHistory(get().doc)

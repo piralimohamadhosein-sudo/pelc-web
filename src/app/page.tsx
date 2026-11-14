@@ -22,8 +22,14 @@ export default function Home() {
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const setDocTitle = useEditorStore((s) => s.setDocTitle)
+  const hydrateFavoriteFonts = useEditorStore((s) => s.hydrateFavoriteFonts)
   const [saveOpen, setSaveOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
+
+  // خواندن فونت‌های ستاره‌دار از localStorage — فقط سمت مرورگر، پس از هیدراسیون
+  useEffect(() => {
+    hydrateFavoriteFonts()
+  }, [hydrateFavoriteFonts])
 
   // میان‌برهای صفحه‌کلید: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
   useEffect(() => {

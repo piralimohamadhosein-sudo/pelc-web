@@ -71,6 +71,54 @@
   font-weight: 100 900;
   font-display: swap;
 }
+@font-face {
+  font-family: "Cairo";
+  src: url("/fonts/Cairo.ttf") format("truetype");
+  font-weight: 200 1000;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Tajawal";
+  src: url("/fonts/Tajawal-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Harmattan";
+  src: url("/fonts/Harmattan-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Amiri Quran";
+  src: url("/fonts/AmiriQuran-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Rakkas";
+  src: url("/fonts/Rakkas-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Lalezar";
+  src: url("/fonts/Lalezar-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Katibeh";
+  src: url("/fonts/Katibeh-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "El Messiri";
+  src: url("/fonts/ElMessiri.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+}
 
 @theme inline {
   --color-background: var(--background);

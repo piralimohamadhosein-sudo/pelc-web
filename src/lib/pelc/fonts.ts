@@ -25,6 +25,15 @@ export const PELC_FONTS: PelcFont[] = [
   { id: "naskh-noto", displayName: "نسخ نوتو", style: "نسخ", license: "OFL 1.1", file: "NotoNaskhArabic.ttf", cssFamily: '"Noto Naskh Arabic"' },
   { id: "gulzar", displayName: "گلزار", style: "نستعلیق", license: "OFL 1.1", file: "Gulzar-Regular.ttf", cssFamily: '"Gulzar"' },
   { id: "nastaliq", displayName: "نستعلیق اردو", style: "نستعلیق", license: "OFL 1.1", file: "NotoNastaliqUrdu.ttf", cssFamily: '"Noto Nastaliq Urdu"' },
+  /* ---- فونت‌های عربی افزودهٔ تازه — با نشان «(عربی)» ---- */
+  { id: "cairo", displayName: "کایرو (عربی)", style: "سانس مدرن", license: "OFL 1.1", file: "Cairo.ttf", cssFamily: '"Cairo"' },
+  { id: "tajawal", displayName: "تجوال (عربی)", style: "سانس عربی", license: "OFL 1.1", file: "Tajawal-Regular.ttf", cssFamily: '"Tajawal"' },
+  { id: "harmattan", displayName: "هرمتان (عربی)", style: "ساده‌شدهٔ عربی", license: "OFL 1.1", file: "Harmattan-Regular.ttf", cssFamily: '"Harmattan"' },
+  { id: "amiri-quran", displayName: "امیری قرآن (عربی)", style: "نسخ قرآنی", license: "OFL 1.1", file: "AmiriQuran-Regular.ttf", cssFamily: '"Amiri Quran"' },
+  { id: "rakkas", displayName: "رقاص (عربی)", style: "نمایشی دکوری", license: "OFL 1.1", file: "Rakkas-Regular.ttf", cssFamily: '"Rakkas"' },
+  { id: "lalezar", displayName: "لاله‌زار (عربی)", style: "نمایشی", license: "OFL 1.1", file: "Lalezar-Regular.ttf", cssFamily: '"Lalezar"' },
+  { id: "katibeh", displayName: "کتیبه (عربی)", style: "نمایشی", license: "OFL 1.1", file: "Katibeh-Regular.ttf", cssFamily: '"Katibeh"' },
+  { id: "el-messiri", displayName: "المسیری (عربی)", style: "مدرن", license: "OFL 1.1", file: "ElMessiri.ttf", cssFamily: '"El Messiri"' },
 ]
 
 export function fontById(id: string): PelcFont {
