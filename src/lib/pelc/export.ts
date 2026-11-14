@@ -11,6 +11,7 @@
 
 import type { CSSProperties } from "react"
 import { argbToCss, type Layer, type PelcDocument } from "./model"
+import { displayTextFor } from "./arabicText"
 import { ensureFontLoaded, fontById, fontCssFamily } from "./fonts"
 
 export type ExportFormat = "PNG" | "JPG" | "SVG" | "PELC"
@@ -42,18 +43,12 @@ export function layerTextStyle(layer: Layer, scale = 1): CSSProperties {
     fontWeight: t.fontId === "amiri-bold" ? 700 : 400,
     fontSize: t.fontSize * scale,
     lineHeight: t.lineHeight,
-    color: argbToCss(t.style?.color ?? t.color),
+    color: argbToCss(t.color),
     direction: t.rtl ? "rtl" : "ltr",
     whiteSpace: "pre-wrap",
   }
-  // گونه‌های حرف: برچسب‌های GSUB همهٔ حرف‌های لایه ترکیب می‌شوند و روی کل واژه
-  // اعمال می‌شوند (محدودیت وب؛ در اندروید به‌صورت خوشه‌به‌خوشه اعمال می‌شود).
-  const tags = Object.values(t.perLetter)
-    .map((o) => o.variantTag)
-    .filter((v): v is string => Boolean(v))
-  if (tags.length > 0) {
-    style.fontFeatureSettings = tags.map((tag) => `"${tag}" 1`).join(", ")
-  }
+  // گونه‌ها و قلمِ تک‌حرف در بوم با قطعه‌بندی (buildTextSegments) به‌تفکیک حرف
+  // اعمال می‌شوند؛ پس اینجا دیگر در سطح لایه اعمال نمی‌شوند.
   // افکت‌ها
   const st = layer.style
   if (st.fillMode === "OUTLINE" && st.strokeWidth > 0) {
@@ -128,7 +123,7 @@ async function renderDocumentToCanvas(doc: PelcDocument, scale: number): Promise
       ctx.shadowOffsetY = st.shadow.dy
     }
 
-    const lines = t.text.split("\n")
+    const lines = displayTextFor(t.text, t.perLetter).split("\n")
     const lineH = t.fontSize * t.lineHeight
     lines.forEach((line, i) => {
       const y = i * lineH
@@ -226,7 +221,7 @@ export async function exportSvg(doc: PelcDocument): Promise<Blob> {
         : ""
     if (goldDef) defs.push(goldDef)
 
-    const lines = t.text.split("\n")
+    const lines = displayTextFor(t.text, t.perLetter).split("\n")
     const tspans = lines
       .map((line, i) => `    <tspan x="${layer.transform.tx}" y="${layer.transform.ty + i * t.fontSize * t.lineHeight}">${xmlEscape(line)}</tspan>`)
       .join("\n")

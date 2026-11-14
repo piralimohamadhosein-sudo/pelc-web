@@ -12,13 +12,22 @@
  * مرورگر در نسخهٔ وب، HarfBuzz NDK در اندروید) همیشه درست بماند.
  */
 
-import { defaultLetterOverride, isDefaultOverride, type LetterOverride } from "./model"
+import {
+  defaultLetterOverride,
+  isDefaultOverride,
+  normalizeLetterForm,
+  type LetterForm,
+  type LetterOverride,
+} from "./model"
 
 /** نویسهٔ کشیده (تطویل) */
 export const TATWEEL = "\u0640"
 
 /** نیم‌فاصله */
 export const ZWNJ = "\u200C"
+
+/** اتصال‌دهندهٔ صفرعرض — برای تحمیل فرم آغازی/میانی/پایانی */
+export const ZWJ = "\u200D"
 
 /** بیشینهٔ تعداد کشیده پشت‌سرهم در یک نقطه */
 export const MAX_KASHIDA_BEFORE = 8
@@ -227,7 +236,168 @@ export function perLetterFromJson(obj: Record<string, LetterOverride> | undefine
   if (!obj) return {}
   const out: Record<string, LetterOverride> = {}
   for (const [k, v] of Object.entries(obj)) {
-    out[String(Number(k))] = { ...defaultLetterOverride(), ...v, marks: v.marks ?? [] }
+    out[String(Number(k))] = {
+      ...defaultLetterOverride(),
+      ...v,
+      marks: v.marks ?? [],
+      formOverride: normalizeLetterForm(v.formOverride ?? "AUTO"),
+    }
   }
   return out
+}
+
+/* ==========================================================================
+ * حالت‌های حرف (تنها / آغازی / میانی / پایانی)
+ *
+ * هر حرف در هر فونتی چهار فرم دارد و «تغییر حالت حرف» باید در همهٔ فونت‌ها
+ * کار کند — برخلاف گونه‌های GSUB که به فونت وابسته‌اند. فرم دلخواه با
+ * نویسه‌های صفرعرض (ZWJ برای تحمیل اتصال، ZWNJ برای شکستن اتصال) در
+ * «متنِ نمایش» ساخته می‌شود؛ متن اصلی دست‌نخورده می‌ماند پس کلیدهای
+ * perLetter و تاریخچه هیچ‌وقت به‌هم نمی‌ریزند.
+ * ========================================================================== */
+
+/** آیا این نویسه «حرف» است و نه فاصله/شکست خط/اتصال‌دهندهٔ صفرعرض؟ */
+function isLetterBase(base: string): boolean {
+  return base !== " " && base !== "\n" && base !== "\t" && base !== ZWNJ && base !== ZWJ
+}
+
+/** واحدهای متن نمایش: هر واحد = اتصال‌دهنده‌های صفرعرض + نویسه‌های همان کلاستر */
+export interface FormLayoutUnit {
+  chars: string
+  /** اندیس آغاز کلاستر در متن اصلی — برای وصل‌کردن استایل perLetter */
+  clusterStart: number | null
+}
+
+interface FormNeighbors {
+  adjacentPrev: boolean
+  adjacentNext: boolean
+  prevJoinsFwd: boolean
+  nextJoinsBack: boolean
+}
+
+function formNeighbors(clusters: LetterCluster[], index: number): FormNeighbors {
+  const c = clusters[index]
+  const prev = index > 0 ? clusters[index - 1] : null
+  const next = index < clusters.length - 1 ? clusters[index + 1] : null
+  const adjacentPrev = prev !== null && isLetterBase(prev.base) && prev.endExclusive === c.start
+  const adjacentNext = next !== null && isLetterBase(next.base) && c.endExclusive === next.start
+  return {
+    adjacentPrev,
+    adjacentNext,
+    prevJoinsFwd: adjacentPrev && joinsForward(prev!.base),
+    nextJoinsBack: adjacentNext && joinsBackward(next!.base),
+  }
+}
+
+/** ساخت واحدِ نمایش یک کلاستر با توجه به فرم تحمیلی آن */
+function unitForCluster(
+  text: string,
+  clusters: LetterCluster[],
+  index: number,
+  perLetter: Record<string, LetterOverride>,
+): FormLayoutUnit {
+  const c = clusters[index]
+  const override = perLetterOverrideAt(perLetter, c.start)
+  const form: LetterForm = override ? normalizeLetterForm(override.formOverride) : "AUTO"
+  const base = c.base
+  const { adjacentPrev, adjacentNext, prevJoinsFwd, nextJoinsBack } = formNeighbors(clusters, index)
+  const canFwd = joinsForward(base)
+  const canBack = joinsBackward(base)
+
+  let leading = ""
+  let trailing = ""
+
+  switch (form) {
+    case "ISOLATED": {
+      if (adjacentPrev) leading = ZWNJ
+      // اگر اتصال طبیعی از جلو وجود دارد بشکن
+      if (adjacentNext && canFwd && nextJoinsBack) trailing = ZWNJ
+      break
+    }
+    case "INITIAL": {
+      if (canFwd) {
+        // اتصال طبیعی از عقب را بشکن تا فرم آغازی بماند
+        if (adjacentPrev && prevJoinsFwd && canBack) leading = ZWNJ
+        // اتصال از جلو را تضمین کن
+        if (!adjacentNext || !nextJoinsBack) trailing = ZWJ
+      }
+      break
+    }
+    case "MEDIAL": {
+      if (canFwd && canBack) {
+        if (!adjacentPrev) leading = ZWJ
+        else if (!prevJoinsFwd) leading = "" // غیرممکن — به AUTO برمی‌گردد
+        if (!adjacentNext || !nextJoinsBack) trailing = ZWJ
+      }
+      break
+    }
+    case "FINAL": {
+      if (canBack) {
+        if (!adjacentPrev) leading = ZWJ
+        else if (!prevJoinsFwd) leading = "" // غیرممکن — به AUTO برمی‌گردد
+        // اتصال طبیعی از جلو را بشکن تا فرم پایانی بماند
+        if (adjacentNext && canFwd && nextJoinsBack) trailing = ZWNJ
+      }
+      break
+    }
+    default:
+      break
+  }
+
+  return { chars: leading + text.substring(c.start, c.endExclusive) + trailing, clusterStart: c.start }
+}
+
+function perLetterOverrideAt(
+  perLetter: Record<string, LetterOverride>,
+  clusterStart: number,
+): LetterOverride | null {
+  return perLetter[String(clusterStart)] ?? null
+}
+
+/**
+ * چیدمان کامل متن با اعمال همهٔ فرم‌های تحمیلی — خروجی برای نمایش و خروجی‌گیری.
+ * اگر هیچ فرمی تحمل نشده باشد دقیقاً همان متن اصلی برمی‌گردد.
+ */
+export function layoutUnitsWithForms(
+  text: string,
+  perLetter: Record<string, LetterOverride>,
+): FormLayoutUnit[] {
+  const hasForms = Object.values(perLetter).some((o) => normalizeLetterForm(o.formOverride) !== "AUTO")
+  if (!hasForms) return letterClusters(text).map((c) => ({ chars: text.substring(c.start, c.endExclusive), clusterStart: c.start }))
+  const clusters = letterClusters(text)
+  return clusters.map((_, i) => unitForCluster(text, clusters, i, perLetter))
+}
+
+/** متنِ نمایش لایه — با فرم‌های تحمیلی و بدون تغییر متن اصلی */
+export function displayTextFor(text: string, perLetter: Record<string, LetterOverride>): string {
+  return layoutUnitsWithForms(text, perLetter)
+    .map((u) => u.chars)
+    .join("")
+}
+
+/**
+ * کدام فرم‌ها برای کلاستر [clusterStart] مجازند؟ (برای غیرفعال‌کردن دکمه‌های UI)
+ * قانون همان اتصال‌شناسی کشیده است: حرف باید از سمتِ مربوطه بچسبد و حرفِ
+ * مجاورِ واقعاً چسبان داشته باشد؛ اگر حرفِ مجاور نمی‌چسبد (مثل الف/دال) فرم
+ * میانی/پایانی ممکن نیست.
+ */
+export function formAvailability(
+  text: string,
+  clusterStart: number,
+): Record<LetterForm, boolean> {
+  const clusters = letterClusters(text)
+  const idx = clusters.findIndex((c) => c.start === clusterStart)
+  if (idx < 0) return { AUTO: false, ISOLATED: false, INITIAL: false, MEDIAL: false, FINAL: false }
+  const c = clusters[idx]
+  const { adjacentPrev, prevJoinsFwd } = formNeighbors(clusters, idx)
+  const canFwd = joinsForward(c.base)
+  const canBack = joinsBackward(c.base)
+  const backwardOk = !adjacentPrev || prevJoinsFwd
+  return {
+    AUTO: true,
+    ISOLATED: true,
+    INITIAL: canFwd,
+    MEDIAL: canFwd && canBack && backwardOk,
+    FINAL: canBack && backwardOk,
+  }
 }

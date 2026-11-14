@@ -11,14 +11,19 @@ import {
   defaultLetterOverride,
   findLayer,
   isDefaultOverride,
+  LETTER_FORM_TITLES,
+  newId,
   newDocument,
   newLayer,
+  normalizeLetterForm,
   withLayer,
   type Layer,
+  type LetterForm,
   type LetterOverride,
   type MarkType,
   type PelcDocument,
 } from "./model"
+import { measureWordPositions, slicePerLetter, tokenizeWords } from "./measure"
 import {
   insertKashidaBefore,
   insertMarkAfter,
@@ -55,11 +60,14 @@ interface EditorState {
   activeTab: PanelTab
   /** پیام آزمون استرس تاریخچه */
   stressResult: string | null
+  /** ضریب نمایش فعلی بوم (برای اندازه‌گیری‌های DOM) */
+  viewScale: number
 
   /* --- انتخاب --- */
   selectLayer: (id: string) => void
   selectLetter: (clusterStart: number | null) => void
   setActiveTab: (tab: PanelTab) => void
+  setViewScale: (scale: number) => void
 
   /* --- تاریخچه --- */
   undo: () => void
@@ -75,6 +83,11 @@ interface EditorState {
   addLayer: () => void
   deleteLayer: (id: string) => void
   duplicateLayer: (id: string) => void
+
+  /** تبدیل جملهٔ لایه به لایه‌های تک‌کلمه‌ای در همان جای فعلی */
+  splitLayerIntoWords: (id: string) => boolean
+  /** تکان‌دادن ریز لایهٔ انتخاب‌شده (جهت‌نماها) */
+  nudgeSelectedLayer: (dx: number, dy: number) => void
 
   setLayerText: (text: string) => void
   setLayerFont: (fontId: string) => void
@@ -93,6 +106,8 @@ interface EditorState {
 
   /* --- ویرایش حرف --- */
   setLetterVariant: (tag: string | null) => void
+  setLetterForm: (form: LetterForm) => void
+  setLetterFont: (fontId: string | null) => void
   insertKashida: () => void
   removeKashida: () => void
   addMark: (type: MarkType) => void
@@ -169,6 +184,10 @@ function markTitle(type: MarkType): string {
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
+  // قلاب آزمون مرورگری: دسترسی مستقیم استور در کنسول برای عیب‌یابی
+  if (typeof window !== "undefined") {
+    (window as unknown as Record<string, unknown>).__pelcStore = useEditorStore
+  }
   /** اعمال جهش متن با بازنگاشت perLetter و پیگیری انتخاب حرف */
   const commitTextMutation = (mutation: TextMutation, label: string, extraPerLetter?: Record<string, LetterOverride>) => {
     const state = get()
@@ -206,10 +225,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
     selectedClusterStart: null,
     activeTab: "word",
     stressResult: null,
+    viewScale: 0.12,
 
     selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null }),
     selectLetter: (clusterStart) => set({ selectedClusterStart: clusterStart }),
     setActiveTab: (tab) => set({ activeTab: tab }),
+    setViewScale: (scale) => set({ viewScale: scale }),
 
     undo: () => {
       const h = ensureHistory(get().doc)
@@ -309,6 +330,51 @@ export const useEditorStore = create<EditorState>((set, get) => {
       layers.splice(idx + 1, 0, copy)
       state.commit({ ...state.doc, layers }, "تکثیر لایه")
       set({ selectedLayerId: copy.id, selectedClusterStart: null })
+    },
+
+    splitLayerIntoWords: (id) => {
+      const state = get()
+      const layer = findLayer(state.doc, id)
+      if (!layer?.text) return false
+      const tokens = tokenizeWords(layer.text.text)
+      if (tokens.length < 2) return false
+      const boxes = measureWordPositions(layer, state.viewScale)
+      if (!boxes) return false
+
+      const wordLayers: Layer[] = tokens.map((tk, i) => {
+        const copy: Layer = JSON.parse(JSON.stringify(layer))
+        copy.id = newId()
+        copy.name = `کلمه: ${tk.token.slice(0, 16)}`
+        copy.text = {
+          ...layer.text!,
+          text: tk.token,
+          perLetter: slicePerLetter(layer.text!.perLetter, tk.rawStart, tk.token.length),
+        }
+        copy.transform = {
+          ...layer.transform,
+          tx: Math.round(layer.transform.tx + boxes[i].x),
+          ty: Math.round(layer.transform.ty + boxes[i].y),
+        }
+        return copy
+      })
+
+      const idx = state.doc.layers.findIndex((l) => l.id === id)
+      const layers = [...state.doc.layers]
+      layers.splice(idx, 1, ...wordLayers)
+      state.commit({ ...state.doc, layers }, "تبدیل جمله به کلماتِ مستقل")
+      set({ selectedLayerId: wordLayers[0].id, selectedClusterStart: null })
+      return true
+    },
+
+    nudgeSelectedLayer: (dx, dy) => {
+      const state = get()
+      const layer = findLayer(state.doc, state.selectedLayerId)
+      if (!layer) return
+      const next = withLayer(state.doc, layer.id, (l) => ({
+        ...l,
+        transform: { ...l.transform, tx: l.transform.tx + dx, ty: l.transform.ty + dy },
+      }))
+      state.commit(next, "تکان‌دادن لایه", `nudge:${layer.id}`)
     },
 
     setLayerText: (text) => {
@@ -457,6 +523,35 @@ export const useEditorStore = create<EditorState>((set, get) => {
       }
       const next = withLayer(state.doc, layer.id, (l) => ({ ...l, text: { ...l.text!, perLetter } }))
       state.commit(next, tag ? `گونهٔ ${tag} روی حرف` : "حذف گونهٔ حرف")
+    },
+    setLetterForm: (form) => {
+      const state = get()
+      const layer = findLayer(state.doc, state.selectedLayerId)
+      const start = state.selectedClusterStart
+      if (!layer?.text || start === null) return
+      const key = String(start)
+      const existing: LetterOverride = layer.text.perLetter[key] ?? defaultLetterOverride()
+      const updated: LetterOverride = { ...existing, formOverride: form === "AUTO" ? null : normalizeLetterForm(form) }
+      const perLetter = { ...layer.text.perLetter }
+      if (isDefaultOverride(updated)) delete perLetter[key]
+      else perLetter[key] = updated
+      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, text: { ...l.text!, perLetter } }))
+      state.commit(next, form === "AUTO" ? "بازگشت فرم حرف به خودکار" : `فرم حرف: ${LETTER_FORM_TITLES[form]}`)
+    },
+    setLetterFont: (fontId) => {
+      const state = get()
+      const layer = findLayer(state.doc, state.selectedLayerId)
+      const start = state.selectedClusterStart
+      if (!layer?.text || start === null) return
+      if (fontId !== null && !PELC_FONT_IDS.has(fontId)) return
+      const key = String(start)
+      const existing: LetterOverride = layer.text.perLetter[key] ?? defaultLetterOverride()
+      const updated: LetterOverride = { ...existing, fontId }
+      const perLetter = { ...layer.text.perLetter }
+      if (isDefaultOverride(updated)) delete perLetter[key]
+      else perLetter[key] = updated
+      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, text: { ...l.text!, perLetter } }))
+      state.commit(next, fontId ? "قلمِ این حرف" : "حذف قلمِ اختصاصی حرف")
     },
     insertKashida: () => {
       const state = get()

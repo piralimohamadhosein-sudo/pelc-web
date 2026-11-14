@@ -4,11 +4,13 @@
 
 import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, COLOR_SWATCHES, findLayer } from "@/lib/pelc/model"
+import { tokenizeWords } from "@/lib/pelc/measure"
 import { PELC_FONTS } from "@/lib/pelc/fonts"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
+import { SplitSquareHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function WordPanel() {
@@ -22,12 +24,14 @@ export function WordPanel() {
   const setStrokeWidth = useEditorStore((s) => s.setStrokeWidth)
   const setGold = useEditorStore((s) => s.setGold)
   const setShadow = useEditorStore((s) => s.setShadow)
+  const splitLayerIntoWords = useEditorStore((s) => s.splitLayerIntoWords)
 
   const layer = findLayer(doc, selectedLayerId)
   if (!layer?.text) {
     return <p className="text-sm text-muted-foreground">لایهٔ انتخاب‌شده متنی ندارد.</p>
   }
   const t = layer.text
+  const wordCount = tokenizeWords(t.text).length
 
   return (
     <div className="space-y-4">
@@ -48,6 +52,24 @@ export function WordPanel() {
           شکل‌دهی را HarfBuzz مرورگر انجام می‌دهد — اتصال حروف و جای علامت‌ها همیشه درست است.
         </p>
       </section>
+
+      {wordCount >= 2 && (
+        <section className="space-y-2 rounded-lg border border-primary/40 bg-accent/40 p-3">
+          <Label className="text-sm font-semibold">کلمات مستقل</Label>
+          <p className="text-xs leading-5 text-muted-foreground">
+            این متن {wordCount.toLocaleString("fa-IR")} کلمه دارد. با این دکمه هر کلمه یک لایهٔ مستقل می‌شود؛ بعد هر
+            کلمه را جداگانه بکشید یا با جهت‌نماها تکان دهید.
+          </p>
+          <button
+            type="button"
+            onClick={() => splitLayerIntoWords(layer.id)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            <SplitSquareHorizontal className="size-4" />
+            تبدیل جمله به کلماتِ مستقل
+          </button>
+        </section>
+      )}
 
       <section className="space-y-2">
         <Label htmlFor="layer-font" className="text-sm font-semibold">

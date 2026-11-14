@@ -161,10 +161,41 @@ export interface MarkSpec {
   scale: number
 }
 
+/**
+ * حالت (فرم) شکل‌دهی حرف:
+ *  - AUTO: همان فرم طبیعی زمینه (پیش‌فرض فونت)
+ *  - ISOLATED: تنها (بدون اتصال)
+ *  - INITIAL: آغازی (فقط اتصال از جلو)
+ *  - MEDIAL: میانی (اتصال از هر دو طرف)
+ *  - FINAL: پایانی (فقط اتصال از عقب)
+ *
+ * پیاده‌سازی وب با نویسه‌های صفرعرض ZWJ/ZWNJ در متنِ نمایش انجام می‌شود و
+ * شکل‌دهی HarfBuzz مرورگر را نمی‌شکند؛ نسخهٔ اندروید همان برچسب را با
+ * HarfBuzz NDK اعمال می‌کند. در JSON به‌صورت رشته ذخیره می‌شود (سازگار با
+ * LetterOverride.kt که formOverride: String? دارد).
+ */
+export type LetterForm = "AUTO" | "ISOLATED" | "INITIAL" | "MEDIAL" | "FINAL"
+
+export const LETTER_FORMS: LetterForm[] = ["AUTO", "ISOLATED", "INITIAL", "MEDIAL", "FINAL"]
+
+/** خواندن امن formOverride از JSON (مقدار ناشناخته = AUTO) */
+export function normalizeLetterForm(v: unknown): LetterForm {
+  return LETTER_FORMS.includes(v as LetterForm) ? (v as LetterForm) : "AUTO"
+}
+
+export const LETTER_FORM_TITLES: Record<LetterForm, string> = {
+  AUTO: "خودکار",
+  ISOLATED: "تنها",
+  INITIAL: "آغازی",
+  MEDIAL: "میانی",
+  FINAL: "پایانی",
+}
+
 /** بازنویسی تک‌حرف — فقط فیلدهای متفاوت از پیش‌فرض پر می‌شوند */
 export interface LetterOverride {
   fontId?: string | null
   variantTag?: string | null
+  formOverride?: LetterForm | null
   dx: number
   dy: number
   scale: number
@@ -174,7 +205,17 @@ export interface LetterOverride {
 }
 
 export function defaultLetterOverride(): LetterOverride {
-  return { dx: 0, dy: 0, scale: 1, rotateDeg: 0, fontId: null, variantTag: null, color: null, marks: [] }
+  return {
+    dx: 0,
+    dy: 0,
+    scale: 1,
+    rotateDeg: 0,
+    fontId: null,
+    variantTag: null,
+    formOverride: null,
+    color: null,
+    marks: [],
+  }
 }
 
 export function isDefaultOverride(o: LetterOverride): boolean {
@@ -182,6 +223,7 @@ export function isDefaultOverride(o: LetterOverride): boolean {
   return (
     (o.fontId ?? null) === d.fontId &&
     (o.variantTag ?? null) === d.variantTag &&
+    normalizeLetterForm(o.formOverride) === "AUTO" &&
     o.dx === d.dx &&
     o.dy === d.dy &&
     o.scale === d.scale &&

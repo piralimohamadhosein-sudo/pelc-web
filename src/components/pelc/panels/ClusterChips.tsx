@@ -8,7 +8,7 @@
 
 import { useEditorStore } from "@/lib/pelc/store"
 import { clusterDisplayLabel, letterClusters, type LetterCluster } from "@/lib/pelc/arabicText"
-import { findLayer } from "@/lib/pelc/model"
+import { findLayer, LETTER_FORM_TITLES, normalizeLetterForm } from "@/lib/pelc/model"
 import { cn } from "@/lib/utils"
 
 export function useSelectedLayerText(): string | null {
@@ -34,17 +34,22 @@ export function ClusterChips({ showKashidaBadge = false }: { showKashidaBadge?: 
 
   return (
     <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="انتخاب حرف">
-      {clusters.map((c) => (
-        <Chip
-          key={c.start}
-          cluster={c}
-          selected={c.start === selectedClusterStart}
-          variant={perLetter[String(c.start)]?.variantTag ?? null}
-          markCount={perLetter[String(c.start)]?.marks.length ?? 0}
-          showKashidaBadge={showKashidaBadge}
-          onSelect={() => selectLetter(c.start === selectedClusterStart ? null : c.start)}
-        />
-      ))}
+      {clusters.map((c) => {
+        const ov = perLetter[String(c.start)]
+        return (
+          <Chip
+            key={c.start}
+            cluster={c}
+            selected={c.start === selectedClusterStart}
+            variant={ov?.variantTag ?? null}
+            form={ov ? normalizeLetterForm(ov.formOverride) : "AUTO"}
+            letterFont={ov?.fontId ?? null}
+            markCount={ov?.marks.length ?? 0}
+            showKashidaBadge={showKashidaBadge}
+            onSelect={() => selectLetter(c.start === selectedClusterStart ? null : c.start)}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -53,6 +58,8 @@ function Chip({
   cluster,
   selected,
   variant,
+  form,
+  letterFont,
   markCount,
   showKashidaBadge,
   onSelect,
@@ -60,11 +67,19 @@ function Chip({
   cluster: LetterCluster
   selected: boolean
   variant: string | null
+  form: string
+  letterFont: string | null
   markCount: number
   showKashidaBadge: boolean
   onSelect: () => void
 }) {
   const isWhitespace = cluster.base === " " || cluster.base === "\n" || cluster.base === "\u200C"
+  const hasForm = form !== "AUTO"
+  const titleParts: string[] = []
+  if (variant) titleParts.push(`گونهٔ ${variant}`)
+  if (hasForm) titleParts.push(`فرم ${LETTER_FORM_TITLES[form as keyof typeof LETTER_FORM_TITLES] ?? form}`)
+  if (letterFont) titleParts.push(`قلم اختصاصی`)
+  const title = titleParts.length > 0 ? titleParts.join(" · ") : clusterDisplayLabel(cluster)
   return (
     <button
       type="button"
@@ -78,7 +93,7 @@ function Chip({
           ? "border-primary bg-accent text-accent-foreground shadow-sm"
           : "bg-card text-card-foreground hover:bg-accent/60",
       )}
-      title={variant ? `گونهٔ ${variant}` : clusterDisplayLabel(cluster)}
+      title={title}
     >
       <span className="text-lg leading-6">{clusterDisplayLabel(cluster)}</span>
       {showKashidaBadge && cluster.kashidaBefore > 0 && (
@@ -94,7 +109,18 @@ function Chip({
           {variant}
         </span>
       )}
-      {!variant && markCount > 0 && (
+      {!variant && hasForm && (
+        <span
+          className="absolute -top-1.5 -end-1.5 rounded-full bg-chart-1 px-1.5 text-[9px] font-bold text-white"
+          title={`فرم ${LETTER_FORM_TITLES[form as keyof typeof LETTER_FORM_TITLES] ?? form}`}
+        >
+          {LETTER_FORM_TITLES[form as keyof typeof LETTER_FORM_TITLES]?.slice(0, 3) ?? "!"}
+        </span>
+      )}
+      {!variant && !hasForm && letterFont && (
+        <span className="absolute -top-1.5 -end-1.5 size-2.5 rounded-full border border-white bg-chart-5" />
+      )}
+      {!variant && !hasForm && !letterFont && markCount > 0 && (
         <span className="absolute -top-1.5 -end-1.5 rounded-full bg-chart-3 px-1.5 text-[9px] font-bold text-white">
           {markCount}
         </span>
