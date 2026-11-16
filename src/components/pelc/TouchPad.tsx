@@ -1,136 +1,231 @@
 "use client"
 
 /**
- * تاچ‌پد جابه‌جایی — چهارجهتهٔ کوچکِ مخصوص موبایل.
+ * تاچ‌پد لمسی جابه‌جایی — سطحِ کشیدنی، نه دکمه‌ای.
  *
- * با انتخاب هر لایه (تکی یا گروهی) پایین-چپ بوم ظاهر می‌شود؛ ضربه = یک گام
- * کوچک و نگه‌داشتن = حرکت پیوسته. دکمهٔ مرکزی بین گامِ ریز (۲ واحد) و درشت
- * (۱۲ واحد) عوض می‌شود. لرزش کوتاه (vibrate) بازخورد لمسی می‌دهد و چون
- * نudge از طریق store ثبت می‌شود، تکان‌های پیوسته در تاریخچه یک‌جا ادغام
- * می‌شوند — یک واگرد کل حرکت را برمی‌گرداند.
+ * انگشت (یا موس) را روی سطح بکشید؛ لایهٔ انتخاب‌شده — و در انتخاب چندگانه
+ * همهٔ لایه‌های انتخاب‌شده — دقیقاً هم‌جهت با حرکت انگشت و به نسبت «سرعت»
+ * جابه‌جا می‌شود. حرکت زنده است و در پایان کشیدن یک‌جا ثبت می‌شود؛ پس یک
+ * واگرد کل حرکت را برمی‌گرداند.
+ *
+ * تاچ‌پد همیشه در گوشهٔ چپِ پایین بوم است و سرعت آن با لغزندهٔ کوچک زیر
+ * سطح تنظیم می‌شود (۰٫۲۵ تا ۴ برابر) و در localStorage می‌ماند. نقطهٔ
+ * طلایی داخل سطح جای انگشت را نشان می‌دهد و پس از رهاکردن با یک حرکت نرم
+ * به مرکز برمی‌گردد. لرزش کوتاه (vibrate) بازخورد لمسی موبایل است.
  */
 
 import { useEffect, useRef, useState } from "react"
 import { useEditorStore } from "@/lib/pelc/store"
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react"
+import { Move } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const FINE_STEP = 2
-const COARSE_STEP = 12
-/** تأخیر پیش از شروع حرکت پیوسته و فاصلهٔ تکرار */
-const REPEAT_DELAY = 280
-const REPEAT_INTERVAL = 90
+/** کلید ذخیرهٔ سرعت در localStorage */
+const SPEED_KEY = "pelc-touchpad-speed"
+const MIN_SPEED = 0.25
+const MAX_SPEED = 4
+const SPEED_STEP = 0.25
+/** آستانهٔ شروع حرکت واقعی (px) تا ضربه‌های تصادفی لایه را تکان ندهند */
+const MOVE_THRESHOLD = 3
+
+const clampSpeed = (v: number) => Math.min(MAX_SPEED, Math.max(MIN_SPEED, v))
+
+const fa = (n: number) => n.toLocaleString("fa-IR")
 
 export function TouchPad() {
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId)
   const selectedCount = useEditorStore((s) => s.selectedLayerIds.length)
-  const [coarse, setCoarse] = useState(false)
-  const timers = useRef<{ delay?: number; interval?: number }>({})
-  const step = coarse ? COARSE_STEP : FINE_STEP
   const hasSelection = Boolean(selectedLayerId) || selectedCount > 0
 
-  // پاک‌سازی تایمرها هنگامUnmount تا حرکت پیوسته بی‌وقفه نماند
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{
+    startX: number
+    startY: number
+    bases: { id: string; tx: number; ty: number }[]
+    moved: boolean
+  } | null>(null)
+
+  const [speed, setSpeed] = useState(1)
+  /** جای نقطهٔ نشانگر داخل سطح — پیش‌فرض مرکز */
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
+  /** مجموع جابه‌جایی زنده بر حسب واحد سند — برای نمایش عددی */
+  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null)
+  const dragging = cursor !== null
+
+  // بازیابی سرعت ذخیره‌شده — فقط سمت مرورگر، پس از هیدراسیون؛ با تیک تأخیر
+  // تا setState همزمان با بدنهٔ اثر رندر آبشاری نسازد
   useEffect(() => {
-    return () => {
-      if (timers.current.delay !== undefined) window.clearTimeout(timers.current.delay)
-      if (timers.current.interval !== undefined) window.clearInterval(timers.current.interval)
-      timers.current = {}
-    }
+    const t = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(SPEED_KEY)
+        const v = raw ? Number.parseFloat(raw) : Number.NaN
+        if (Number.isFinite(v)) setSpeed(clampSpeed(v))
+      } catch {
+        /* حافظه در دسترس نیست — سرعت پیش‌فرض می‌ماند */
+      }
+    }, 0)
+    return () => window.clearTimeout(t)
   }, [])
 
-  const stopRepeat = () => {
-    if (timers.current.delay !== undefined) window.clearTimeout(timers.current.delay)
-    if (timers.current.interval !== undefined) window.clearInterval(timers.current.interval)
-    timers.current = {}
+  const changeSpeed = (v: number) => {
+    const next = clampSpeed(v)
+    setSpeed(next)
+    try {
+      window.localStorage.setItem(SPEED_KEY, String(next))
+    } catch {
+      /* بی‌اهمیت */
+    }
   }
 
-  const startRepeat = (dx: number, dy: number) => {
-    useEditorStore.getState().nudgeSelectedLayer(dx, dy)
-    // بازخورد لمسی کوتاه روی موبایل (روی دسکتاپ بی‌اثر است)
+  const cursorAt = (clientX: number, clientY: number) => {
+    const r = surfaceRef.current?.getBoundingClientRect()
+    if (!r || r.width === 0 || r.height === 0) return { x: 0, y: 0 }
+    return {
+      x: Math.min(r.width - 5, Math.max(5, clientX - r.left)),
+      y: Math.min(r.height - 5, Math.max(5, clientY - r.top)),
+    }
+  }
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (drag.current) return
+    const st = useEditorStore.getState()
+    const active = st.selectedLayerIds.length > 1 ? st.selectedLayerIds : st.selectedLayerId ? [st.selectedLayerId] : []
+    if (active.length === 0) return
+    const bases = st.doc.layers
+      .filter((l) => active.includes(l.id) && !l.locked)
+      .map((l) => ({ id: l.id, tx: l.transform.tx, ty: l.transform.ty }))
+    if (bases.length === 0) return
+    // گرفتن نشانگر تا کشیدن بیرون از سطح هم ادامه یابد (روی برخی مرورگرهای
+    // آزمایشی ممکن است نباشد — در try می‌ماند)
     try {
-      navigator.vibrate?.(8)
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* بدون گرفتن هم کشیدن داخل سطح کار می‌کند */
+    }
+    drag.current = { startX: e.clientX, startY: e.clientY, bases, moved: false }
+    setCursor(cursorAt(e.clientX, e.clientY))
+    setOffset({ x: 0, y: 0 })
+    try {
+      navigator.vibrate?.(10)
     } catch {
       /* مرورگر پشتیبانی نمی‌کند */
     }
-    stopRepeat()
-    timers.current.delay = window.setTimeout(() => {
-      timers.current.interval = window.setInterval(() => {
-        useEditorStore.getState().nudgeSelectedLayer(dx, dy)
-      }, REPEAT_INTERVAL)
-    }, REPEAT_DELAY)
+  }
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d) return
+    setCursor(cursorAt(e.clientX, e.clientY))
+    if (Math.abs(e.clientX - d.startX) + Math.abs(e.clientY - d.startY) > MOVE_THRESHOLD) d.moved = true
+    if (!d.moved) return
+    const st = useEditorStore.getState()
+    const scale = st.viewScale || 1
+    const dx = ((e.clientX - d.startX) / scale) * speed
+    const dy = ((e.clientY - d.startY) / scale) * speed
+    const baseById = new Map(d.bases.map((b) => [b.id, b]))
+    const next = {
+      ...st.doc,
+      layers: st.doc.layers.map((l) => {
+        const b = baseById.get(l.id)
+        return b
+          ? { ...l, transform: { ...l.transform, tx: Math.round(b.tx + dx), ty: Math.round(b.ty + dy) } }
+          : l
+      }),
+    }
+    st.beginLiveUpdate(next)
+    setOffset({ x: Math.round(dx), y: Math.round(dy) })
+  }
+
+  const onPointerUp = () => {
+    const d = drag.current
+    drag.current = null
+    setCursor(null)
+    setOffset(null)
+    if (d?.moved) {
+      useEditorStore
+        .getState()
+        .commitLiveUpdate(d.bases.length > 1 ? "جابه‌جایی گروهی با تاچ‌پد" : "جابه‌جایی لایه با تاچ‌پد")
+      try {
+        navigator.vibrate?.(6)
+      } catch {
+        /* بی‌اهمیت */
+      }
+    }
   }
 
   if (!hasSelection) return null
 
-  const nudgeBtn = (
-    dx: number,
-    dy: number,
-    label: string,
-    icon: React.ReactNode,
-  ) => (
-    <button
-      type="button"
-      aria-label={label}
-      title={`${label} — نگه دارید تا پیوسته حرکت کند`}
-      className="grid size-9 touch-none select-none place-items-center rounded-lg bg-secondary text-foreground shadow-sm transition-colors active:bg-accent active:text-accent-foreground sm:size-10"
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId)
-        startRepeat(dx, dy)
-      }}
-      onPointerUp={stopRepeat}
-      onPointerCancel={stopRepeat}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {icon}
-    </button>
-  )
-
   return (
     <div
       dir="rtl"
-      className="absolute bottom-2 start-2 z-20 flex flex-col items-center gap-1 sm:bottom-3 sm:start-auto sm:end-3"
+      className="absolute bottom-3 left-3 z-20 w-[132px] touch-none select-none rounded-2xl border border-primary/45 bg-card/85 p-1.5 shadow-lg backdrop-blur sm:w-[148px]"
+      role="group"
+      aria-label="تاچ‌پد لمسی جابه‌جایی لایه"
     >
-      {selectedCount > 1 && (
-        <span
-          className="-top-2 absolute start-0 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-accent-foreground shadow-sm sm:-top-2.5"
-          dir="rtl"
-        >
-          همه با هم
-        </span>
-      )}
-      <div
-        dir="ltr"
-        role="group"
-        aria-label="تاچ‌پد جابه‌جایی لایه"
-        className="grid touch-none grid-cols-3 grid-rows-3 gap-0.5 rounded-2xl border border-primary/45 bg-card/90 p-1 shadow-lg backdrop-blur sm:gap-1 sm:p-1.5"
-      >
-        <span />
-        {nudgeBtn(0, -step, "جابه‌جایی به بالا", <ArrowUp className="size-4" />)}
-        <span />
-        {nudgeBtn(-step, 0, "جابه‌جایی به چپ", <ArrowLeft className="size-4" />)}
-        <button
-          type="button"
-          aria-label="تغییر اندازهٔ گام: ریز یا درشت"
-          aria-pressed={coarse}
-          title="اندازهٔ گام — ریز (۲) یا درشت (۱۲)"
-          className={cn(
-            "grid size-9 place-items-center rounded-lg shadow-sm transition-colors sm:size-10",
-            coarse ? "bg-accent text-accent-foreground" : "bg-primary text-primary-foreground",
-          )}
-          onClick={() => setCoarse((v) => !v)}
-        >
-          <span className="text-xs font-extrabold leading-none">
-            {step.toLocaleString("fa-IR")}
+      {/* سرستون — عنوان و بازخورد وضعیت */}
+      <div className="mb-1 flex h-4 items-center justify-between px-0.5">
+        <span className="text-[10px] font-bold leading-none text-foreground/90">تاچ‌پد</span>
+        {selectedCount > 1 ? (
+          <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold leading-none text-accent-foreground shadow-sm">
+            همه با هم
           </span>
-        </button>
-        {nudgeBtn(step, 0, "جابه‌جایی به راست", <ArrowRight className="size-4" />)}
-        <span />
-        {nudgeBtn(0, step, "جابه‌جایی به پایین", <ArrowDown className="size-4" />)}
-        <span />
+        ) : offset && dragging ? (
+          <span dir="ltr" className="text-[9px] leading-none tabular-nums text-muted-foreground">
+            {fa(offset.x)} ، {fa(offset.y)}
+          </span>
+        ) : null}
       </div>
-      <span className="hidden rounded-full border border-border/60 bg-card/85 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm sm:block">
-        تاچ‌پد جابه‌جایی
-      </span>
+
+      {/* سطح لمسی — انگشت را بکشید */}
+      <div
+        ref={surfaceRef}
+        className="pelc-pad-surface relative h-[76px] touch-none overflow-hidden rounded-xl border border-border/70 bg-black/25 transition-colors active:border-primary/70"
+        aria-label="سطح لمسی جابه‌جایی — انگشت را روی سطح بکشید"
+        title="انگشت را روی سطح بکشید — لایه هم‌جهت با انگشت جابه‌جا می‌شود"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {/* راهنمای مرکز — هنگام کشیدن پنهان می‌شود */}
+        <Move
+          className={cn(
+            "pointer-events-none absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-foreground/30 transition-opacity",
+            dragging && "opacity-0",
+          )}
+          aria-hidden
+        />
+        {/* نقطهٔ طلایی نشانگر — جای انگشت را نشان می‌دهد و به مرکز برمی‌گردد */}
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_7px_rgba(217,182,74,0.85)]",
+            dragging ? "transition-[left,top] duration-75" : "transition-[left,top] duration-300",
+          )}
+          style={cursor ? { left: cursor.x, top: cursor.y } : { left: "50%", top: "50%" }}
+        />
+      </div>
+
+      {/* لغزندهٔ سرعت */}
+      <div className="mt-1 flex items-center gap-1.5" dir="ltr">
+        <span dir="rtl" className="shrink-0 text-[9px] font-medium leading-none text-muted-foreground">
+          سرعت
+        </span>
+        <input
+          type="range"
+          min={MIN_SPEED}
+          max={MAX_SPEED}
+          step={SPEED_STEP}
+          value={speed}
+          onChange={(e) => changeSpeed(Number.parseFloat(e.target.value))}
+          aria-label="سرعت تاچ‌پد"
+          title="سرعت جابه‌جایی — از ۰٫۲۵ تا ۴ برابر"
+          className="pelc-speed h-1.5 min-w-0 flex-1 cursor-pointer"
+        />
+        <span className="w-10 shrink-0 text-center text-[10px] font-extrabold leading-none text-primary">
+          ×{speed.toLocaleString("fa-IR", { maximumFractionDigits: 2 })}
+        </span>
+      </div>
     </div>
   )
 }

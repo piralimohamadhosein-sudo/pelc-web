@@ -121,7 +121,7 @@ export function GroupScaleBar() {
   const percent = liveFactor === null ? 100 : Math.round(liveFactor * 100)
 
   return (
-    <div className="absolute end-3 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1.5">
+    <div className="absolute end-3 top-2 z-20 flex flex-col items-center gap-1.5">
       <div
         dir="ltr"
         aria-live="polite"
