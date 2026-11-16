@@ -6,6 +6,7 @@ import { useEditorStore } from "@/lib/pelc/store"
 import { canKashidaBefore, letterClusters } from "@/lib/pelc/arabicText"
 import { findLayer } from "@/lib/pelc/model"
 import { ClusterChips } from "./ClusterChips"
+import { EmptyTextState, hasNoTextLayers } from "./EmptyTextState"
 import { Button } from "@/components/ui/button"
 import { Maximize2, Minimize2, Info } from "lucide-react"
 
@@ -19,6 +20,11 @@ export function KashidaPanel() {
   void stressResult
 
   const layer = findLayer(doc, selectedLayerId)
+
+  // سند هنوز هیچ متنی ندارد → دکمهٔ زرد شروع
+  const emptyDoc = useEditorStore((s) => hasNoTextLayers(s.doc))
+  if (emptyDoc) return <EmptyTextState />
+
   const text = layer?.text?.text ?? ""
   const clusters = letterClusters(text)
   const selected = clusters.find((c) => c.start === selectedClusterStart) ?? null

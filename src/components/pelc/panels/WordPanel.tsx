@@ -4,6 +4,7 @@
 
 import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, COLOR_SWATCHES, findLayer } from "@/lib/pelc/model"
+import { EmptyTextState, hasNoTextLayers } from "./EmptyTextState"
 import { FontPicker } from "@/components/pelc/FontPicker"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -23,6 +24,10 @@ export function WordPanel() {
   const setStrokeWidth = useEditorStore((s) => s.setStrokeWidth)
   const setGold = useEditorStore((s) => s.setGold)
   const setShadow = useEditorStore((s) => s.setShadow)
+
+  // سند هنوز هیچ متنی ندارد → دکمهٔ زرد شروع
+  const emptyDoc = useEditorStore((s) => hasNoTextLayers(s.doc))
+  if (emptyDoc) return <EmptyTextState />
 
   const layer = findLayer(doc, selectedLayerId)
   if (!layer?.text) {

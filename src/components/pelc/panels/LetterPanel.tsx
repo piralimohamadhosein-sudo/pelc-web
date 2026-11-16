@@ -15,6 +15,7 @@ import { fontById } from "@/lib/pelc/fonts"
 import { detectVariantTags, variantTagLabel } from "@/lib/pelc/variants"
 import { formAvailability } from "@/lib/pelc/arabicText"
 import { ClusterChips } from "./ClusterChips"
+import { EmptyTextState, hasNoTextLayers } from "./EmptyTextState"
 import { FontPicker } from "@/components/pelc/FontPicker"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Info } from "lucide-react"
@@ -71,6 +72,10 @@ export function LetterPanel() {
   const activeLetterFont = override?.fontId ?? null
   const availability: Record<LetterForm, boolean> | null =
     selectedClusterStart !== null && layer?.text ? formAvailability(text, selectedClusterStart) : null
+
+  // سند هنوز هیچ متنی ندارد → دکمهٔ زرد شروع
+  const emptyDoc = useEditorStore((s) => hasNoTextLayers(s.doc))
+  if (emptyDoc) return <EmptyTextState />
 
   return (
     <div className="space-y-4">
