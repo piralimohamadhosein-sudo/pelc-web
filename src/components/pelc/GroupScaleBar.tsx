@@ -125,7 +125,7 @@ export function GroupScaleBar() {
       <div
         dir="ltr"
         aria-live="polite"
-        className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-stone-900 shadow-sm"
+        className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow-sm"
       >
         {percent.toLocaleString("fa-IR")}٪
       </div>
@@ -137,7 +137,7 @@ export function GroupScaleBar() {
         aria-valuemax={Math.round(MAX_FACTOR * 100)}
         aria-valuenow={percent}
         title="بکشید به بالا = بزرگ‌تر، به پایین = کوچک‌تر — تناسب اندازهٔ همهٔ لایه‌ها حفظ می‌شود"
-        className="relative w-3 touch-none rounded-full border border-amber-300/30 bg-black/45 shadow-sm"
+        className="relative w-3 touch-none rounded-full border border-primary/45 bg-black/40 shadow-sm"
         style={{ height: TRACK_H }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -145,14 +145,14 @@ export function GroupScaleBar() {
         onPointerCancel={onPointerUp}
       >
         {/* نشانهٔ مرکز = ۱۰۰٪ */}
-        <div className="absolute left-1/2 top-1/2 h-px w-2 -translate-x-1/2 -translate-y-1/2 bg-amber-200/60" />
+        <div className="absolute left-1/2 top-1/2 h-px w-2 -translate-x-1/2 -translate-y-1/2 bg-primary/70" />
         {/* دستگیره */}
         <div
-          className="absolute left-1/2 h-4 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-400 shadow-md ring-1 ring-yellow-600/60"
+          className="absolute left-1/2 h-4 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-md ring-1 ring-[#8a6d1f]/70"
           style={{ top: handleT * TRACK_H }}
         />
       </div>
-      <span className="text-center text-[9px] leading-3 text-amber-100/70">
+      <span className="text-center text-[9px] leading-3 text-muted-foreground">
         مقیاس
         <br />
         گروهی

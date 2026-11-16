@@ -12,10 +12,11 @@ import { SaveDialog } from "@/components/pelc/SaveDialog"
 import { AboutDialog } from "@/components/pelc/AboutDialog"
 import { WelcomeDialog, WELCOME_SEEN_KEY } from "@/components/pelc/WelcomeDialog"
 import { SupportDialog } from "@/components/pelc/SupportDialog"
+import { Shamsa } from "@/components/pelc/Shamsa"
 import { useEditorStore } from "@/lib/pelc/store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Undo2, Redo2, Save, Info, MessageCircle, PenTool } from "lucide-react"
+import { Undo2, Redo2, Save, Info, MessageCircle } from "lucide-react"
 
 export default function Home() {
   const doc = useEditorStore((s) => s.doc)
@@ -82,50 +83,81 @@ export default function Home() {
 
   return (
     <div className="flex h-dvh min-h-0 flex-col bg-background">
-      {/* نوار بالا */}
-      <header className="flex shrink-0 items-center gap-2 border-b bg-card px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <PenTool className="size-5" />
+      {/* نوار بالا — هدر باریک با مدالیون شمسه و حاشیهٔ گره‌چینی */}
+      <header className="shrink-0">
+        <div className="flex items-center gap-2 border-b bg-card px-3 py-1.5">
+          <span
+            className="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-sm"
+            aria-hidden
+          >
+            <Shamsa className="size-5" />
           </span>
-          <div className="leading-tight">
-            <p className="text-sm font-bold">پلک</p>
+          <p className="text-sm font-extrabold tracking-tight">پلک</p>
+
+          <Input
+            value={doc.title}
+            onChange={(e) => setDocTitle(e.target.value)}
+            aria-label="عنوان سند"
+            className="mx-1 hidden h-8 max-w-52 flex-1 bg-secondary/60 text-xs sm:block"
+          />
+
+          <div className="ms-auto flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="واگرد"
+              title="واگرد (Ctrl+Z)"
+              disabled={!canUndo}
+              onClick={undo}
+              className="size-8"
+            >
+              <Undo2 className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="ازنو"
+              title="ازنو (Ctrl+Shift+Z)"
+              disabled={!canRedo}
+              onClick={redo}
+              className="size-8"
+            >
+              <Redo2 className="size-4" />
+            </Button>
+            <Button size="sm" onClick={() => setSaveOpen(true)} className="h-8 px-2.5 text-xs">
+              <Save className="size-4" /> ذخیره
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="پشتیبانی"
+              onClick={() => setSupportOpen(true)}
+              className="h-8 px-2.5 text-xs"
+            >
+              <MessageCircle className="size-4" /> پشتیبانی
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="دربارهٔ نسخهٔ وب"
+              title="درباره"
+              onClick={() => setAboutOpen(true)}
+              className="size-8"
+            >
+              <Info className="size-4" />
+            </Button>
           </div>
         </div>
-
-        <Input
-          value={doc.title}
-          onChange={(e) => setDocTitle(e.target.value)}
-          aria-label="عنوان سند"
-          className="mx-2 hidden h-9 max-w-56 flex-1 text-sm sm:block"
-        />
-
-        <div className="ms-auto flex items-center gap-1.5">
-          <Button variant="outline" size="icon" aria-label="واگرد" disabled={!canUndo} onClick={undo}>
-            <Undo2 className="size-4" />
-          </Button>
-          <Button variant="outline" size="icon" aria-label="ازنو" disabled={!canRedo} onClick={redo}>
-            <Redo2 className="size-4" />
-          </Button>
-          <Button size="sm" onClick={() => setSaveOpen(true)}>
-            <Save className="size-4" /> ذخیره
-          </Button>
-          <Button variant="outline" size="sm" aria-label="پشتیبانی" onClick={() => setSupportOpen(true)}>
-            <MessageCircle className="size-4" /> پشتیبانی
-          </Button>
-          <Button variant="ghost" size="icon" aria-label="دربارهٔ نسخهٔ وب" onClick={() => setAboutOpen(true)}>
-            <Info className="size-4" />
-          </Button>
-        </div>
+        <div className="pelc-girih-strip" aria-hidden="true" />
       </header>
 
       {/* بوم + پنل */}
       <main className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <section className="min-h-[38vh] flex-1 lg:min-h-0" aria-label="بوم ویرایش">
+        <section className="min-h-[42vh] flex-1 lg:min-h-0" aria-label="بوم ویرایش">
           <EditorCanvas />
         </section>
         <aside
-          className="h-[46vh] w-full shrink-0 border-t bg-card lg:h-auto lg:w-96 lg:border-s lg:border-t-0"
+          className="h-[46vh] w-full shrink-0 border-t bg-card lg:h-auto lg:w-[360px] lg:border-s lg:border-t-0"
           aria-label="پنل ویرایش"
         >
           <Panels />

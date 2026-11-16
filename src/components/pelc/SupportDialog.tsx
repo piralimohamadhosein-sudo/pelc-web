@@ -18,9 +18,12 @@ import { Button } from "@/components/ui/button"
 export function SupportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" dir="rtl">
+      <DialogContent className="pelc-gilded sm:max-w-md" dir="rtl">
         <DialogHeader className="items-center text-center sm:text-center">
-          <span className="grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <span
+            className="grid size-12 place-items-center rounded-xl bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-sm"
+            aria-hidden
+          >
             <MessageCircle className="size-6" />
           </span>
           <DialogTitle className="text-xl leading-8">پشتیبانی</DialogTitle>

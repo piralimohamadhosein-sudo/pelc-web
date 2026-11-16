@@ -37,62 +37,56 @@ export function WordPanel() {
   const isMultiSelect = selectedLayerIds.length > 1
 
   return (
-    <div className="space-y-4">
-      <section className="space-y-2">
-        <Label htmlFor="layer-text" className="text-sm font-semibold">
+    <div className="space-y-3">
+      <section className="space-y-1.5">
+        <Label htmlFor="layer-text" className="text-xs font-semibold">
           متن لایه
         </Label>
         <Textarea
           id="layer-text"
           dir="rtl"
-          rows={3}
-          className="text-lg leading-relaxed"
+          rows={2}
+          className="text-base leading-relaxed"
           value={t.text}
           onChange={(e) => setLayerText(e.target.value)}
           placeholder="مثلاً: بسم الله الرحمن الرحیم"
         />
-        <p className="text-xs text-muted-foreground">
-          شکل‌دهی را HarfBuzz مرورگر انجام می‌دهد — اتصال حروف و جای علامت‌ها همیشه درست است.
-        </p>
       </section>
 
       {wordCount >= 2 && (
-        <section className="space-y-2 rounded-lg border border-primary/40 bg-accent/40 p-3">
-          <Label className="text-sm font-semibold">کلمات مستقل</Label>
-          <p className="text-xs leading-5 text-muted-foreground">
-            این متن {wordCount.toLocaleString("fa-IR")} کلمه دارد. با این دکمه هر کلمه یک لایهٔ مستقل می‌شود؛ بعد هر
-            کلمه را جداگانه بکشید یا با جهت‌نماها تکان دهید.
+        <section className="space-y-1.5 rounded-lg border border-primary/40 bg-accent/40 p-2">
+          <Label className="text-xs font-semibold">کلمات مستقل</Label>
+          <p className="text-[11px] leading-4 text-muted-foreground">
+            این متن {wordCount.toLocaleString("fa-IR")} کلمه دارد — با این دکمه هر کلمه یک لایهٔ مستقل می‌شود تا جداگانه جابه‌جا شود.
           </p>
           <button
             type="button"
             onClick={() => splitLayerIntoWords(layer.id)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
             <SplitSquareHorizontal className="size-4" />
-            تبدیل جمله به کلماتِ مستقل
+            تبدیل به کلماتِ مستقل
           </button>
         </section>
       )}
 
-      <section className="space-y-2">
-        <Label className="text-sm font-semibold">قلم</Label>
+      <section className="space-y-1.5">
+        <Label className="text-xs font-semibold">قلم</Label>
         {isMultiSelect && (
-          <p className="rounded-md border border-primary/40 bg-accent/40 px-2.5 py-1.5 text-xs leading-5">
-            «انتخاب همه» فعال است — با انتخاب یک قلم، قلم همهٔ{' '}
+          <p className="rounded-md border border-primary/40 bg-accent/40 px-2 py-1 text-[10px] leading-4">
+            انتخاب همه فعال — قلم همهٔ{' '}
             <span dir="ltr" className="font-semibold">
               {selectedLayerIds.length.toLocaleString("fa-IR")}
             </span>{' '}
-            لایهٔ انتخاب‌شده با هم عوض می‌شود.
+            لایه با هم عوض می‌شود.
           </p>
         )}
         <FontPicker value={t.fontId} onChange={setLayerFont} ariaLabel="قلم لایه" />
-        <p className="text-[11px] leading-4 text-muted-foreground">
-          با ستارهٔ کنار هر فونت، آن را به علاقه‌مندی‌ها بیفزایید؛ ستاره‌دارها بالای فهرست می‌آیند.
-        </p>
+        <p className="text-[10px] leading-3.5 text-muted-foreground">ستاره = افزودن به علاقه‌مندی‌ها.</p>
       </section>
 
       <section>
-        <Label className="text-sm font-semibold">
+        <Label className="text-xs font-semibold">
           اندازهٔ قلم: <span dir="ltr">{t.fontSize}</span>
         </Label>
         <Slider
@@ -101,22 +95,22 @@ export function WordPanel() {
           step={2}
           value={[t.fontSize]}
           onValueChange={([v]) => setLayerFontSize(v)}
-          className="mt-2"
+          className="mt-1.5"
         />
       </section>
 
-      <section className="space-y-2">
-        <Label className="text-sm font-semibold">رنگ</Label>
+      <section className="space-y-1.5">
+        <Label className="text-xs font-semibold">رنگ</Label>
         {isMultiSelect && (
-          <p className="rounded-md border border-primary/40 bg-accent/40 px-2.5 py-1.5 text-xs leading-5">
-            «انتخاب همه» فعال است — با انتخاب یک رنگ، رنگ همهٔ{' '}
+          <p className="rounded-md border border-primary/40 bg-accent/40 px-2 py-1 text-[10px] leading-4">
+            انتخاب همه فعال — رنگ همهٔ{' '}
             <span dir="ltr" className="font-semibold">
               {selectedLayerIds.length.toLocaleString("fa-IR")}
             </span>{' '}
-            لایهٔ انتخاب‌شده با هم عوض می‌شود.
+            لایه با هم عوض می‌شود.
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {COLOR_SWATCHES.map((c) => (
             <button
               key={c.argb}
@@ -124,7 +118,7 @@ export function WordPanel() {
               aria-label={c.label}
               title={c.label}
               className={cn(
-                "size-8 rounded-full border-2 shadow-sm transition-transform hover:scale-105",
+                "size-7 rounded-full border-2 shadow-sm transition-transform hover:scale-105",
                 t.color === c.argb ? "border-primary ring-2 ring-primary/40" : "border-border",
               )}
               style={{ background: argbToCss(c.argb) }}
@@ -134,25 +128,25 @@ export function WordPanel() {
           <input
             type="color"
             aria-label="رنگ سفارشی"
-            className="size-8 cursor-pointer rounded-md border"
+            className="size-7 cursor-pointer rounded-md border"
             value={argbToCss(t.color)}
             onChange={(e) => setLayerColor(parseInt("ff" + e.target.value.slice(1), 16))}
           />
         </div>
       </section>
 
-      <section className="space-y-3 rounded-lg border bg-card p-3">
-        <Label className="text-sm font-semibold">حالت پرکردن</Label>
+      <section className="space-y-2 rounded-lg border bg-card p-2.5">
+        <Label className="text-xs font-semibold">حالت پرکردن و افکت‌ها</Label>
         {isMultiSelect && (
-          <p className="rounded-md border border-primary/40 bg-accent/40 px-2.5 py-1.5 text-xs leading-5">
-            «انتخاب همه» فعال است — حالت پرکردن و افکت‌ها روی{' '}
+          <p className="rounded-md border border-primary/40 bg-accent/40 px-2 py-1 text-[10px] leading-4">
+            انتخاب همه فعال — حالت پرکردن و افکت‌ها روی{' '}
             <span dir="ltr" className="font-semibold">
               {selectedLayerIds.length.toLocaleString("fa-IR")}
             </span>{' '}
-            لایهٔ انتخاب‌شده با هم اعمال می‌شود.
+            لایه با هم اعمال می‌شود.
           </p>
         )}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {(
             [
               { id: "SOLID", label: "توپُر" },
@@ -165,10 +159,10 @@ export function WordPanel() {
               type="button"
               onClick={() => setFillMode(m.id)}
               className={cn(
-                "rounded-lg border px-2 py-2 text-sm transition-colors",
+                "rounded-md border px-2 py-1.5 text-xs transition-colors",
                 layer.style.fillMode === m.id
                   ? "border-primary bg-accent text-accent-foreground"
-                  : "bg-card hover:bg-accent/50",
+                  : "bg-secondary/60 hover:bg-accent/50",
               )}
             >
               {m.label}
@@ -177,7 +171,7 @@ export function WordPanel() {
         </div>
         {layer.style.fillMode === "OUTLINE" && (
           <div>
-            <Label className="text-xs text-muted-foreground">
+            <Label className="text-[11px] text-muted-foreground">
               ضخامت خط‌دور: <span dir="ltr">{Math.round(layer.style.strokeWidth)}</span>
             </Label>
             <Slider
@@ -186,20 +180,20 @@ export function WordPanel() {
               step={1}
               value={[layer.style.strokeWidth]}
               onValueChange={([v]) => setStrokeWidth(v)}
-              className="mt-2"
+              className="mt-1.5"
             />
           </div>
         )}
         {layer.style.fillMode === "GOLD" && (
           <div className="flex items-center justify-between">
-            <Label htmlFor="gold-switch" className="text-sm">
+            <Label htmlFor="gold-switch" className="text-xs">
               گرادیان طلایی دوتُنه
             </Label>
             <SwitchLike checked={Boolean(layer.style.gold?.enabled)} onChange={setGold} id="gold-switch" />
           </div>
         )}
         <div className="flex items-center justify-between">
-          <Label htmlFor="shadow-switch" className="text-sm">
+          <Label htmlFor="shadow-switch" className="text-xs">
             سایه
           </Label>
           <SwitchLike checked={Boolean(layer.style.shadow)} onChange={setShadow} id="shadow-switch" />

@@ -26,6 +26,7 @@ import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
 import { BoxSelect, SplitSquareHorizontal } from "lucide-react"
 import { GroupScaleBar } from "@/components/pelc/GroupScaleBar"
+import { TouchPad } from "@/components/pelc/TouchPad"
 
 const MIN_SCALE_FRACTION = 0.86 // بیشینهٔ عرض نسبی سند داخل مرحله
 
@@ -256,8 +257,8 @@ export function EditorCanvas() {
           onClick={() => (selectedLayerIds.length > 0 ? clearMultiSelect() : selectAllLayers())}
           className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold shadow-sm transition-colors ${
             selectedLayerIds.length > 0
-              ? "border-yellow-600 bg-yellow-300 text-stone-900 hover:bg-yellow-200"
-              : "border-yellow-600/60 bg-yellow-400 text-stone-900 hover:bg-yellow-300"
+              ? "border-accent bg-accent text-accent-foreground hover:bg-accent/85"
+              : "border-primary/70 bg-primary text-primary-foreground hover:bg-primary/85"
           }`}
           title="همهٔ لایه‌ها انتخاب می‌شوند؛ جابه‌جایی، مقیاس، رنگ، قلم و حالت پرکردن با یک عمل روی همه اعمال می‌شود (Esc = لغو)"
         >
@@ -270,7 +271,7 @@ export function EditorCanvas() {
           type="button"
           disabled={!canSplit}
           onClick={() => selectedLayerId && splitLayerIntoWords(selectedLayerId)}
-          className="flex items-center gap-1.5 rounded-lg border border-amber-300/30 bg-black/45 px-3 py-1.5 text-xs font-medium text-amber-100 shadow-sm transition-colors hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/85 px-3 py-1.5 text-xs font-medium text-foreground/90 shadow-sm backdrop-blur-sm transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-40"
           title="هر کلمه به یک لایهٔ مستقل تبدیل می‌شود تا جداگانه کشیده و تکان داده شود"
         >
           <SplitSquareHorizontal className="size-4" />
@@ -281,9 +282,12 @@ export function EditorCanvas() {
       {/* نوار مقیاس گروهی — فقط با انتخاب چندگانه ظاهر می‌شود */}
       <GroupScaleBar />
 
-      {/* نوار وضعیت بوم */}
+      {/* تاچ‌پد جابه‌جایی — با انتخاب هر لایه ظاهر می‌شود (مخصوص موبایل) */}
+      <TouchPad />
+
+      {/* نوار وضعیت بوم — در موبایل مخفی برای جمع‌وجوری */}
       <div
-        className="pointer-events-none absolute bottom-2 start-2 rounded-md bg-black/45 px-2.5 py-1 text-[11px] text-amber-100/90"
+        className="pointer-events-none absolute bottom-2 start-2 hidden rounded-md border border-border/50 bg-card/80 px-2.5 py-1 text-[11px] text-muted-foreground backdrop-blur-sm sm:block"
         dir="rtl"
       >
         <span dir="ltr">
@@ -292,7 +296,7 @@ export function EditorCanvas() {
         <span className="ms-2">
           {selectedLayerIds.length > 1
             ? `· ${selectedLayerIds.length.toLocaleString("fa-IR")} لایه انتخاب شد — رنگ، قلم، پرکردن و جابه‌جایی روی همه اعمال می‌شود`
-            : "· لایه را بکشید یا با جهت‌نما تکان دهید"}
+            : "· لایه را بکشید یا با تاچ‌پد جابه‌جا کنید"}
         </span>
       </div>
     </div>

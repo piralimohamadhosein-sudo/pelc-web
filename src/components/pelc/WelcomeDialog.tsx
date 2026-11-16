@@ -6,7 +6,7 @@
  * اطلاعات طراح و پشتیبانی به گفت‌وگوی «پشتیبانی» (SupportDialog) منتقل شده است.
  */
 
-import { PenTool } from "lucide-react"
+import { Shamsa } from "@/components/pelc/Shamsa"
 import {
   Dialog,
   DialogContent,
@@ -22,10 +22,13 @@ export const WELCOME_SEEN_KEY = "pelc-welcome-seen"
 export function WelcomeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" dir="rtl">
-        <DialogHeader className="items-center text-center sm:text-center">
-          <span className="grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <PenTool className="size-6" />
+      <DialogContent className="pelc-gilded sm:max-w-md" dir="rtl">
+        <DialogHeader className="items-center gap-2 text-center sm:text-center">
+          <span
+            className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-md"
+            aria-hidden
+          >
+            <Shamsa className="size-8" />
           </span>
           <DialogTitle className="text-xl leading-8">به pelc خوش آمدید ✒️</DialogTitle>
           <DialogDescription className="leading-6">
@@ -36,6 +39,7 @@ export function WelcomeDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           </DialogDescription>
         </DialogHeader>
 
+        <div className="pelc-girih-strip" aria-hidden="true" />
         <p className="text-center text-sm font-semibold">شروع کنیم؟</p>
         <Button onClick={() => onOpenChange(false)} className="w-full">
           شروع کنیم

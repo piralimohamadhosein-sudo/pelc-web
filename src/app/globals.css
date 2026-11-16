@@ -159,77 +159,79 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ---------- تم پلک: مرکبی/طلایی (مطابق برند اپ اندروید) ---------- */
+/* ---------- تم پلک: اسلامی–ایرانی ----------
+   لاجوردی کاشی‌کاری، فیروزه‌ای نیشابور، طلایی تذهیب و عاجی کاغذ کاله
+   — نگاره‌ها با الگوی شمسهٔ هشت‌پر تکرار می‌شوند. */
 
 :root {
   --radius: 0.75rem;
-  --background: #faf6ee;
-  --foreground: #221d15;
-  --card: #fffdf8;
-  --card-foreground: #221d15;
-  --popover: #fffdf8;
-  --popover-foreground: #221d15;
-  --primary: #c9a227;
-  --primary-foreground: #2a2110;
-  --secondary: #f1e9d6;
-  --secondary-foreground: #2a2110;
-  --muted: #f1e9d6;
-  --muted-foreground: #6f6754;
-  --accent: #f5e9c8;
-  --accent-foreground: #2a2110;
-  --destructive: #b3362e;
-  --destructive-foreground: #fff8f7;
-  --border: #e5dcc4;
-  --input: #e5dcc4;
-  --ring: #c9a227;
-  --chart-1: #c9a227;
-  --chart-2: #1e3a5f;
-  --chart-3: #0f6e4e;
-  --chart-4: #a52a2a;
-  --chart-5: #8a8a8a;
-  --sidebar: #fffdf8;
-  --sidebar-foreground: #221d15;
-  --sidebar-primary: #c9a227;
-  --sidebar-primary-foreground: #2a2110;
-  --sidebar-accent: #f5e9c8;
-  --sidebar-accent-foreground: #2a2110;
-  --sidebar-border: #e5dcc4;
-  --sidebar-ring: #c9a227;
+  --background: #0d1b31;
+  --foreground: #f0e7d0;
+  --card: #13233c;
+  --card-foreground: #f0e7d0;
+  --popover: #16283f;
+  --popover-foreground: #f0e7d0;
+  --primary: #d9b64a;
+  --primary-foreground: #2a1f06;
+  --secondary: #1c3050;
+  --secondary-foreground: #f0e7d0;
+  --muted: #1c3050;
+  --muted-foreground: #9fb1cd;
+  --accent: #0e5a58;
+  --accent-foreground: #e7fffa;
+  --destructive: #d15c4d;
+  --destructive-foreground: #fff6f2;
+  --border: #294264;
+  --input: #294264;
+  --ring: #d9b64a;
+  --chart-1: #d9b64a;
+  --chart-2: #2fa79f;
+  --chart-3: #8fd3c7;
+  --chart-4: #c96f4a;
+  --chart-5: #8fa3c2;
+  --sidebar: #13233c;
+  --sidebar-foreground: #f0e7d0;
+  --sidebar-primary: #d9b64a;
+  --sidebar-primary-foreground: #2a1f06;
+  --sidebar-accent: #0e5a58;
+  --sidebar-accent-foreground: #e7fffa;
+  --sidebar-border: #294264;
+  --sidebar-ring: #d9b64a;
 }
 
 .dark {
-  --background: #191611;
-  --foreground: #f3ecdc;
-  --card: #221e17;
-  --card-foreground: #f3ecdc;
-  --popover: #221e17;
-  --popover-foreground: #f3ecdc;
-  --primary: #d4b34a;
-  --primary-foreground: #2a2110;
-  --secondary: #2e2820;
-  --secondary-foreground: #f3ecdc;
-  --muted: #2e2820;
-  --muted-foreground: #a99f89;
-  --accent: #3a3223;
-  --accent-foreground: #f3ecdc;
-  --destructive: #e05c53;
-  --destructive-foreground: #fff8f7;
-  --border: #3a3428;
-  --input: #3a3428;
-  --ring: #d4b34a;
-  --chart-1: #d4b34a;
-  --chart-2: #7a9cc4;
-  --chart-3: #5aa88a;
-  --chart-4: #d2766e;
-  --chart-5: #b0a894;
-  --sidebar: #221e17;
-  --sidebar-foreground: #f3ecdc;
-  --sidebar-primary: #d4b34a;
-  --sidebar-primary-foreground: #2a2110;
-  --sidebar-accent: #3a3223;
-  --sidebar-accent-foreground: #f3ecdc;
-  --sidebar-border: #3a3428;
-  --sidebar-ring: #d4b34a;
+  --background: #0d1b31;
+  --foreground: #f0e7d0;
+  --card: #13233c;
+  --card-foreground: #f0e7d0;
+  --popover: #16283f;
+  --popover-foreground: #f0e7d0;
+  --primary: #d9b64a;
+  --primary-foreground: #2a1f06;
+  --secondary: #1c3050;
+  --secondary-foreground: #f0e7d0;
+  --muted: #1c3050;
+  --muted-foreground: #9fb1cd;
+  --accent: #0e5a58;
+  --accent-foreground: #e7fffa;
+  --destructive: #d15c4d;
+  --destructive-foreground: #fff6f2;
+  --border: #294264;
+  --input: #294264;
+  --ring: #d9b64a;
+  --chart-1: #d9b64a;
+  --chart-2: #2fa79f;
+  --chart-3: #8fd3c7;
+  --chart-4: #c96f4a;
+  --chart-5: #8fa3c2;
+  --sidebar: #13233c;
+  --sidebar-foreground: #f0e7d0;
+  --sidebar-primary: #d9b64a;
+  --sidebar-primary-foreground: #2a1f06;
+  --sidebar-accent: #0e5a58;
+  --sidebar-accent-foreground: #e7fffa;
+  --sidebar-border: #294264;
+  --sidebar-ring: #d9b64a;
 }
 
 @layer base {
@@ -242,11 +244,32 @@
   }
 }
 
-/* ---------- بوم ویرایشگر ---------- */
+/* ---------- بوم ویرایشگر — محراب لاجوردی با شمسهٔ گره‌چینی ---------- */
 
 .pelc-stage {
-  background-color: #26221c;
-  background-image: radial-gradient(circle at 30% 20%, rgba(212, 179, 74, 0.05), transparent 55%);
+  background-color: #0a1426;
+  background-image:
+    radial-gradient(circle at 28% 16%, rgba(217, 182, 74, 0.08), transparent 55%),
+    radial-gradient(circle at 78% 84%, rgba(47, 167, 159, 0.1), transparent 52%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23d9b64a' stroke-opacity='0.10'%3E%3Crect x='22' y='22' width='20' height='20'/%3E%3Crect x='22' y='22' width='20' height='20' transform='rotate(45 32 32)'/%3E%3C/g%3E%3Cg fill='none' stroke='%232fa79f' stroke-opacity='0.09'%3E%3Ccircle cx='0' cy='0' r='8'/%3E%3Ccircle cx='64' cy='0' r='8'/%3E%3Ccircle cx='0' cy='64' r='8'/%3E%3Ccircle cx='64' cy='64' r='8'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* نوار تزئینی گره‌چینی — زنجیرهٔ جواهرطلاییِ زیر هدر و لبهٔ گفت‌وگوها */
+.pelc-girih-strip {
+  height: 5px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='6' viewBox='0 0 28 6'%3E%3Cpath d='M7 0.5 L11.2 3 L7 5.5 L2.8 3 Z' fill='%23d9b64a'/%3E%3Cpath d='M21 1.5 L23.3 3 L21 4.5 L18.7 3 Z' fill='%232fa79f'/%3E%3C/svg%3E");
+  background-size: 28px 5px;
+  background-repeat: repeat-x;
+  background-position: center;
+  opacity: 0.85;
+}
+
+/* کارت گفت‌وگو با حاشیهٔ طلایی — حس جلد کتاب تذهیب‌شده */
+.pelc-gilded {
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent),
+    0 24px 70px rgba(4, 10, 22, 0.6);
 }
 
 .pelc-doc {
@@ -266,7 +289,7 @@
 }
 
 .pelc-layer-handle {
-  outline: 1.5px solid rgba(201, 162, 39, 0.9);
+  outline: 1.5px solid rgba(217, 182, 74, 0.95);
   outline-offset: 6px;
   cursor: grab;
 }
@@ -274,7 +297,7 @@
   cursor: grabbing;
 }
 .pelc-layer-dim {
-  outline: 1.5px dashed rgba(201, 162, 39, 0.35);
+  outline: 1.5px dashed rgba(217, 182, 74, 0.38);
   outline-offset: 6px;
 }
 

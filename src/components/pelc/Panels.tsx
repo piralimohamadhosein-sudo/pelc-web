@@ -30,7 +30,7 @@ export function Panels() {
       <div
         role="tablist"
         aria-label="پنل‌های ویرایش"
-        className="pelc-scroll flex shrink-0 gap-1 overflow-x-auto border-b bg-card px-2 py-1.5"
+        className="pelc-scroll flex shrink-0 gap-0.5 overflow-x-auto border-b bg-card px-1.5 py-1"
       >
         {TABS.map((t) => (
           <button
@@ -39,7 +39,7 @@ export function Panels() {
             aria-selected={activeTab === t.id}
             onClick={() => setActiveTab(t.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors",
+              "flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-xs transition-colors",
               activeTab === t.id
                 ? "bg-accent font-semibold text-accent-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-accent/40",
@@ -52,7 +52,7 @@ export function Panels() {
       </div>
       <div
         role="tabpanel"
-        className="pelc-scroll min-h-0 flex-1 overflow-y-auto p-4"
+        className="pelc-scroll min-h-0 flex-1 overflow-y-auto p-3"
       >
         {activeTab === "layers" && <LayersPanel />}
         {activeTab === "word" && <WordPanel />}
