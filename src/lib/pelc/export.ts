@@ -11,6 +11,7 @@ import type { CSSProperties } from "react"
 import { argbToCss, type Layer, type PelcDocument } from "./model"
 import { displayTextFor } from "./arabicText"
 import { ensureFontLoaded, fontCssFamily } from "./fonts"
+import { getImageAsset } from "./images"
 
 export type ExportFormat = "PNG" | "JPG"
 
@@ -101,8 +102,50 @@ async function renderDocumentToCanvas(
     .map((l) => ensureFontLoaded(l.text!.fontId, Math.min(l.text!.fontSize * Math.max(l.text!.lineHeight, 1), 500)))
   await Promise.all(fontLoads)
 
+  // بارگذاری عکس‌های لایه‌های تصویری (عکس‌نوشته)
+  const imageEls = new Map<string, HTMLImageElement>()
+  await Promise.all(
+    doc.layers
+      .filter((l) => l.visible && l.kind === "IMAGE" && l.image)
+      .map(async (l) => {
+        const asset = getImageAsset(l.image!.assetId)
+        if (!asset) return
+        const img = new Image()
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
+          img.src = asset.src
+        })
+        if (img.naturalWidth > 0) imageEls.set(l.id, img)
+      }),
+  )
+
   for (const layer of doc.layers) {
-    if (!layer.visible || !layer.text) continue
+    if (!layer.visible) continue
+
+    // لایهٔ عکس — رسم تصویر با اندازهٔ مقیاس‌شده (فقط جابه‌جایی/مقیاس)
+    if (layer.kind === "IMAGE" && layer.image) {
+      const img = imageEls.get(layer.id)
+      if (img) {
+        ctx.save()
+        ctx.globalAlpha = layer.opacity
+        ctx.translate(layer.transform.tx, layer.transform.ty)
+        if (layer.transform.rotationDeg !== 0) {
+          ctx.rotate((layer.transform.rotationDeg * Math.PI) / 180)
+        }
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          layer.image.width * layer.transform.scaleX,
+          layer.image.height * layer.transform.scaleY,
+        )
+        ctx.restore()
+      }
+      continue
+    }
+
+    if (!layer.text) continue
     const t = layer.text
     ctx.save()
     ctx.globalAlpha = layer.opacity

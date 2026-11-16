@@ -106,6 +106,8 @@ interface EditorState {
 
   /** افزودن لایهٔ متنی تازه با متن داده‌شده — در میانهٔ بوم؛ شناسهٔ لایه را برمی‌گرداند */
   addTextLayer: (text: string) => string | null
+  /** افزودن لایهٔ عکس (عکس‌نوشته) — در پس‌زمینهٔ بوم، زیر همهٔ متن‌ها؛ پوشش کامل بوم */
+  addImageLayer: (assetId: string, width: number, height: number) => void
   deleteLayer: (id: string) => void
   duplicateLayer: (id: string) => void
 
@@ -393,6 +395,27 @@ export const useEditorStore = create<EditorState>((set, get) => {
       state.commit(next, "افزودن متن")
       set({ selectedLayerId: layer.id, selectedClusterStart: null, selectedLayerIds: [], activeTab: "word" })
       return layer.id
+    },
+    addImageLayer: (assetId, width, height) => {
+      const state = get()
+      const layer = newLayer("عکس")
+      layer.kind = "IMAGE"
+      layer.text = null
+      layer.image = { assetId, width, height }
+      // پوشش کامل بوم (cover) وسط‌چین — متن‌های آماده روی آن می‌نشینند؛
+      // کاربر با کشیدن جابه‌جا و با دستگیره‌های گوشه بزرگ/کوچک می‌کند.
+      const s = Math.max(state.doc.canvas.width / width, state.doc.canvas.height / height)
+      layer.transform = {
+        tx: Math.round((state.doc.canvas.width - width * s) / 2),
+        ty: Math.round((state.doc.canvas.height - height * s) / 2),
+        scaleX: s,
+        scaleY: s,
+        rotationDeg: 0,
+      }
+      // پایین‌ترین ترتیب — زیر همهٔ لایه‌های متنی تا متن روی عکس بیفتد
+      const next: PelcDocument = { ...state.doc, layers: [layer, ...state.doc.layers] }
+      state.commit(next, "افزودن عکس")
+      set({ selectedLayerId: layer.id, selectedClusterStart: null, selectedLayerIds: [] })
     },
     deleteLayer: (id) => {
       const state = get()

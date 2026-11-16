@@ -54,7 +54,7 @@ export interface Transform {
   rotationDeg: number
 }
 
-export type LayerKind = "TEXT" | "ORNAMENT"
+export type LayerKind = "TEXT" | "ORNAMENT" | "IMAGE"
 export type FillMode = "SOLID" | "OUTLINE" | "GOLD"
 export type OrnamentShape = "STAR" | "CIRCLE" | "FRAME" | "BORDER"
 
@@ -77,6 +77,14 @@ export interface OrnamentSpec {
   size: number
 }
 
+/** مرجع عکس لایه — خود فایل در رجیستری تصاویر (بیرون از تاریخچه) نگه داشته می‌شود */
+export interface ImageRef {
+  assetId: string
+  /** ابعاد اصلی تصویر بر حسب پیکسل */
+  width: number
+  height: number
+}
+
 export interface StyleSpec {
   fillMode: FillMode
   color: number
@@ -97,6 +105,7 @@ export interface Layer {
   style: StyleSpec
   text: TextContent | null
   ornament: OrnamentSpec | null
+  image: ImageRef | null
 }
 
 export interface PelcDocument {
@@ -282,6 +291,7 @@ export function newLayer(name = "لایه"): Layer {
     style: defaultStyleSpec(),
     text: defaultTextContent(),
     ornament: null,
+    image: null,
   }
 }
 
