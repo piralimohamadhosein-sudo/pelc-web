@@ -59,7 +59,7 @@ export function EditorCanvas() {
   const nudgeSelectedLayer = useEditorStore((s) => s.nudgeSelectedLayer)
   const setViewScale = useEditorStore((s) => s.setViewScale)
   const viewScale = useEditorStore((s) => s.viewScale)
-  const deleteLayer = useEditorStore((s) => s.deleteLayer)
+  const deleteSelectedLayers = useEditorStore((s) => s.deleteSelectedLayers)
 
   // منوی پلکانی «+» — افزودن متن/عکس از یک دروازهٔ واحد
   const [addMenuOpen, setAddMenuOpen] = useState(false)
@@ -143,13 +143,13 @@ export function EditorCanvas() {
       }
       const move = moves[e.key]
       if (!move) {
-        // Delete/Backspace = حذف لایهٔ عکس انتخاب‌شده (برای لایهٔ متن فعال نیست)
+        // Delete/Backspace = حذف لایهٔ انتخاب‌شده (کلمه یا عکس) — بیرون از فیلدهای متنی
         if (e.key === "Delete" || e.key === "Backspace") {
           const st2 = useEditorStore.getState()
           const sel = findLayer(st2.doc, st2.selectedLayerId)
-          if (sel?.kind === "IMAGE") {
+          if (sel) {
             e.preventDefault()
-            st2.deleteLayer(sel.id)
+            st2.deleteSelectedLayers()
           }
         }
         return
@@ -457,16 +457,17 @@ export function EditorCanvas() {
             : "انتخاب همه"}
         </button>
         <BackgroundPicker />
-        {/* حذف عکس — فقط وقتی لایهٔ عکس انتخاب شده باشد */}
+        {/* حذف لایهٔ انتخاب‌شده — کلمه یا عکس؛ با انتخاب چندگانه همه با هم در یک گام */}
         {(() => {
           const sel = findLayer(doc, selectedLayerId)
-          if (sel?.kind !== "IMAGE") return null
+          if (!sel) return null
+          const isImage = sel.kind === "IMAGE"
           return (
             <button
               type="button"
-              aria-label="حذف عکس"
-              title="حذف عکس (Delete) — یک واگرد برمی‌گرداند"
-              onClick={() => deleteLayer(sel.id)}
+              aria-label={isImage ? "حذف عکس" : "حذف کلمه"}
+              title={`${isImage ? "حذف عکس" : "حذف کلمهٔ انتخاب‌شده"} (Delete) — یک واگرد برمی‌گرداند`}
+              onClick={() => deleteSelectedLayers()}
               className="grid size-9 place-items-center rounded-full border border-destructive/40 bg-card/90 shadow-sm backdrop-blur transition-colors hover:bg-destructive/15"
             >
               <Trash2 className="size-4 text-destructive" />

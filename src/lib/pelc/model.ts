@@ -296,13 +296,12 @@ export function newLayer(name = "لایه"): Layer {
 }
 
 /**
- * شناسه‌های قطعی سند/لایهٔ آغازین.
+ * شناسهٔ قطعی سند.
  *
  * سند آغازین هم در SSR ساخته می‌شود هم در کلاینت؛ اگر شناسه تصادفی باشد،
- * HTML سرور و رندر کلاینت شناسه‌های متفاوت خواهند داشت و hydration روی
- * data-layer-id می‌شکند (متصفح صفت قدیمی سرور را نگه می‌دارد و توابعی که با
- * کوئری DOM کار می‌کنند — مثل اندازه‌گیری واژه‌ها — لایه را پیدا نمی‌کنند).
- * پس شناسهٔ سند و لایهٔ آغازین قطعی است؛ لایه‌هایی که کاربر بعداً می‌سازد
+ * HTML سرور و رندر کلاینت شناسهٔ متفاوت خواهند داشت و hydration می‌شکند.
+ * سند به‌صورت پیش‌فرض «خالی» است — هیچ لایهٔ متنی از قبل وجود ندارد؛ کاربر
+ * از دکمهٔ «+» بوم متن یا عکس اضافه می‌کند. لایه‌هایی که بعداً ساخته می‌شوند
  * UUID تصادفی می‌گیرند (فقط در کلاینت ساخته می‌شوند، SSR در کار نیست).
  */
 export const INITIAL_DOC_ID = "pelc-doc-initial"
@@ -310,17 +309,13 @@ export const INITIAL_LAYER_ID = "pelc-layer-initial"
 
 export function newDocument(): PelcDocument {
   const now = Date.now()
-  const layer: Layer = { ...newLayer("لایهٔ متن"), id: INITIAL_LAYER_ID }
-  layer.text = { ...defaultTextContent(), text: "بسم الله الرحمن الرحیم", fontId: "amiri", fontSize: 160 }
-  // جای شروع متن: میانهٔ افقی و یک‌سوم بالای A4 (کاربر می‌تواند بکشد)
-  layer.transform = { tx: 360, ty: 900, scaleX: 1, scaleY: 1, rotationDeg: 0 }
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     id: INITIAL_DOC_ID,
-    title: "بسم الله",
+    title: "بی‌نام",
     canvas: defaultCanvasSpec(),
     background: defaultBackground(),
-    layers: [layer],
+    layers: [],
     createdAtEpochMs: now,
     modifiedAtEpochMs: now,
   }

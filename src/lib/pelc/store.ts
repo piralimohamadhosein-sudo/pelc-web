@@ -109,6 +109,8 @@ interface EditorState {
   /** افزودن لایهٔ عکس (عکس‌نوشته) — در پس‌زمینهٔ بوم، زیر همهٔ متن‌ها؛ پوشش کامل بوم */
   addImageLayer: (assetId: string, width: number, height: number) => void
   deleteLayer: (id: string) => void
+  /** حذف همهٔ لایه‌های انتخاب‌شده (تکی یا انتخاب همه) در یک گام تاریخچه */
+  deleteSelectedLayers: () => void
   duplicateLayer: (id: string) => void
 
   /** تبدیل جملهٔ لایه به لایه‌های تک‌کلمه‌ای در همان جای فعلی */
@@ -381,12 +383,16 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const state = get()
       const trimmed = text.trim()
       if (!trimmed) return null
-      const layer = newLayer(`متن ${state.doc.layers.length + 1}`)
+      const n = state.doc.layers.length
+      const layer = newLayer(`متن ${n + 1}`)
       layer.text = { ...layer.text!, text: trimmed }
-      // جای تقریبی: میانهٔ افقی بوم و یک‌سوم بالا — کاربر با کشیدن یا تاچ‌پد دقیق می‌کند
+      // جای تقریبی: میانهٔ افقی بوم و یک‌سوم بالا — با پلهٔ مورب کوچک برای هر
+      // لایهٔ موجود تا متن‌های پشت‌سرهم دقیقاً روی هم نیفتند؛ کاربر با کشیدن
+      // یا تاچ‌پد دقیق می‌کند.
+      const step = (n % 8) * 48
       layer.transform = {
-        tx: Math.round(state.doc.canvas.width / 2 - 320),
-        ty: Math.round(state.doc.canvas.height / 2 - 120),
+        tx: Math.round(state.doc.canvas.width / 2 - 320 + step),
+        ty: Math.round(state.doc.canvas.height / 2 - 120 + step),
         scaleX: 1,
         scaleY: 1,
         rotationDeg: 0,
@@ -419,10 +425,25 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
     deleteLayer: (id) => {
       const state = get()
-      if (state.doc.layers.length <= 1) return
+      if (!state.doc.layers.some((l) => l.id === id)) return
       const next: PelcDocument = { ...state.doc, layers: state.doc.layers.filter((l) => l.id !== id) }
       state.commit(next, "حذف لایه")
-      set({ selectedLayerIds: state.selectedLayerIds.filter((x) => x !== id) })
+      // اگر لایهٔ انتخاب‌شده حذف شد، انتخاب روی صفر می‌نشیند (سند می‌تواند کاملاً خالی شود)
+      set({
+        selectedLayerId: state.selectedLayerId === id ? null : state.selectedLayerId,
+        selectedLayerIds: state.selectedLayerIds.filter((x) => x !== id),
+        selectedClusterStart: null,
+      })
+    },
+    deleteSelectedLayers: () => {
+      const state = get()
+      const ids = new Set<string>(state.selectedLayerIds)
+      if (state.selectedLayerId) ids.add(state.selectedLayerId)
+      if (ids.size === 0) return
+      const layers = state.doc.layers.filter((l) => !ids.has(l.id))
+      if (layers.length === state.doc.layers.length) return
+      state.commit({ ...state.doc, layers }, ids.size > 1 ? "حذف لایه‌ها" : "حذف لایه")
+      set({ selectedLayerId: null, selectedClusterStart: null, selectedLayerIds: [] })
     },
     duplicateLayer: (id) => {
       const state = get()
