@@ -92,7 +92,8 @@ export default function Home() {
           >
             <Shamsa className="size-5" />
           </span>
-          <p className="text-sm font-extrabold tracking-tight">پلک</p>
+          {/* لوگوی برند — «پلک» با قلم امیری (نسخ قرآنی) و طلای تذهیب */}
+          <p className="pelc-brand text-[1.7rem] leading-none">پلک</p>
 
           <Input
             value={doc.title}

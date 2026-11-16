@@ -159,79 +159,79 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* ---------- تم پلک: اسلامی–ایرانی ----------
-   لاجوردی کاشی‌کاری، فیروزه‌ای نیشابور، طلایی تذهیب و عاجی کاغذ کاله
-   — نگاره‌ها با الگوی شمسهٔ هشت‌پر تکرار می‌شوند. */
+/* ---------- تم پلک: اسلامی–ایرانی روشن ----------
+   عاجی کاغذ کاله، فیروزهٔ نیشابور و طلایی تذهیب؛ متن‌ها مرکبی تیره.
+   نگاره‌ها با الگوی شمسهٔ هشت‌پر تکرار می‌شوند. */
 
 :root {
   --radius: 0.75rem;
-  --background: #0d1b31;
-  --foreground: #f0e7d0;
-  --card: #13233c;
-  --card-foreground: #f0e7d0;
-  --popover: #16283f;
-  --popover-foreground: #f0e7d0;
-  --primary: #d9b64a;
+  --background: #f7f1e1;
+  --foreground: #33290f;
+  --card: #fffcf3;
+  --card-foreground: #33290f;
+  --popover: #fffcf3;
+  --popover-foreground: #33290f;
+  --primary: #c9a02f;
   --primary-foreground: #2a1f06;
-  --secondary: #1c3050;
-  --secondary-foreground: #f0e7d0;
-  --muted: #1c3050;
-  --muted-foreground: #9fb1cd;
-  --accent: #0e5a58;
-  --accent-foreground: #e7fffa;
-  --destructive: #d15c4d;
+  --secondary: #efe4c8;
+  --secondary-foreground: #33290f;
+  --muted: #f0e8d2;
+  --muted-foreground: #86744d;
+  --accent: #d3e9e2;
+  --accent-foreground: #0b5148;
+  --destructive: #c0432e;
   --destructive-foreground: #fff6f2;
-  --border: #294264;
-  --input: #294264;
-  --ring: #d9b64a;
-  --chart-1: #d9b64a;
+  --border: #e4d7b4;
+  --input: #dccfa9;
+  --ring: #c9a02f;
+  --chart-1: #c9a02f;
   --chart-2: #2fa79f;
-  --chart-3: #8fd3c7;
+  --chart-3: #0e5a58;
   --chart-4: #c96f4a;
   --chart-5: #8fa3c2;
-  --sidebar: #13233c;
-  --sidebar-foreground: #f0e7d0;
-  --sidebar-primary: #d9b64a;
+  --sidebar: #fffcf3;
+  --sidebar-foreground: #33290f;
+  --sidebar-primary: #c9a02f;
   --sidebar-primary-foreground: #2a1f06;
-  --sidebar-accent: #0e5a58;
-  --sidebar-accent-foreground: #e7fffa;
-  --sidebar-border: #294264;
-  --sidebar-ring: #d9b64a;
+  --sidebar-accent: #d3e9e2;
+  --sidebar-accent-foreground: #0b5148;
+  --sidebar-border: #e4d7b4;
+  --sidebar-ring: #c9a02f;
 }
 
 .dark {
-  --background: #0d1b31;
-  --foreground: #f0e7d0;
-  --card: #13233c;
-  --card-foreground: #f0e7d0;
-  --popover: #16283f;
-  --popover-foreground: #f0e7d0;
-  --primary: #d9b64a;
+  --background: #f7f1e1;
+  --foreground: #33290f;
+  --card: #fffcf3;
+  --card-foreground: #33290f;
+  --popover: #fffcf3;
+  --popover-foreground: #33290f;
+  --primary: #c9a02f;
   --primary-foreground: #2a1f06;
-  --secondary: #1c3050;
-  --secondary-foreground: #f0e7d0;
-  --muted: #1c3050;
-  --muted-foreground: #9fb1cd;
-  --accent: #0e5a58;
-  --accent-foreground: #e7fffa;
-  --destructive: #d15c4d;
+  --secondary: #efe4c8;
+  --secondary-foreground: #33290f;
+  --muted: #f0e8d2;
+  --muted-foreground: #86744d;
+  --accent: #d3e9e2;
+  --accent-foreground: #0b5148;
+  --destructive: #c0432e;
   --destructive-foreground: #fff6f2;
-  --border: #294264;
-  --input: #294264;
-  --ring: #d9b64a;
-  --chart-1: #d9b64a;
+  --border: #e4d7b4;
+  --input: #dccfa9;
+  --ring: #c9a02f;
+  --chart-1: #c9a02f;
   --chart-2: #2fa79f;
-  --chart-3: #8fd3c7;
+  --chart-3: #0e5a58;
   --chart-4: #c96f4a;
   --chart-5: #8fa3c2;
-  --sidebar: #13233c;
-  --sidebar-foreground: #f0e7d0;
-  --sidebar-primary: #d9b64a;
+  --sidebar: #fffcf3;
+  --sidebar-foreground: #33290f;
+  --sidebar-primary: #c9a02f;
   --sidebar-primary-foreground: #2a1f06;
-  --sidebar-accent: #0e5a58;
-  --sidebar-accent-foreground: #e7fffa;
-  --sidebar-border: #294264;
-  --sidebar-ring: #d9b64a;
+  --sidebar-accent: #d3e9e2;
+  --sidebar-accent-foreground: #0b5148;
+  --sidebar-border: #e4d7b4;
+  --sidebar-ring: #c9a02f;
 }
 
 @layer base {
@@ -244,14 +244,24 @@
   }
 }
 
-/* ---------- بوم ویرایشگر — محراب لاجوردی با شمسهٔ گره‌چینی ---------- */
+/* ---------- بوم ویرایشگر — محراب عاجی با شمسهٔ گره‌چینی ---------- */
 
 .pelc-stage {
-  background-color: #0a1426;
+  background-color: #f3ecd8;
   background-image:
-    radial-gradient(circle at 28% 16%, rgba(217, 182, 74, 0.08), transparent 55%),
-    radial-gradient(circle at 78% 84%, rgba(47, 167, 159, 0.1), transparent 52%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23d9b64a' stroke-opacity='0.10'%3E%3Crect x='22' y='22' width='20' height='20'/%3E%3Crect x='22' y='22' width='20' height='20' transform='rotate(45 32 32)'/%3E%3C/g%3E%3Cg fill='none' stroke='%232fa79f' stroke-opacity='0.09'%3E%3Ccircle cx='0' cy='0' r='8'/%3E%3Ccircle cx='64' cy='0' r='8'/%3E%3Ccircle cx='0' cy='64' r='8'/%3E%3Ccircle cx='64' cy='64' r='8'/%3E%3C/g%3E%3C/svg%3E");
+    radial-gradient(circle at 28% 16%, rgba(201, 159, 46, 0.12), transparent 55%),
+    radial-gradient(circle at 78% 84%, rgba(47, 167, 159, 0.14), transparent 52%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23c9a02f' stroke-opacity='0.16'%3E%3Crect x='22' y='22' width='20' height='20'/%3E%3Crect x='22' y='22' width='20' height='20' transform='rotate(45 32 32)'/%3E%3C/g%3E%3Cg fill='none' stroke='%232fa79f' stroke-opacity='0.14'%3E%3Ccircle cx='0' cy='0' r='8'/%3E%3Ccircle cx='64' cy='0' r='8'/%3E%3Ccircle cx='0' cy='64' r='8'/%3E%3Ccircle cx='64' cy='64' r='8'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* لوگوی «پلک» — قلم امیری (نسخ قرآنی) با طلای تذهیب */
+.pelc-brand {
+  font-family: "Amiri Bold", "Amiri", serif;
+  font-weight: 400;
+  background: linear-gradient(180deg, #8a6d1f 0%, #c9a02f 45%, #8a6d1f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* نوار تزئینی گره‌چینی — زنجیرهٔ جواهرطلاییِ زیر هدر و لبهٔ گفت‌وگوها */
@@ -269,7 +279,7 @@
   border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent),
-    0 24px 70px rgba(4, 10, 22, 0.6);
+    0 24px 70px rgba(82, 62, 14, 0.22);
 }
 
 /* سطح تاچ‌پد لمسی — بافت گرهِ کم‌رنگ و هالهٔ مرکزی طلایی */
@@ -284,7 +294,7 @@
   -webkit-appearance: none;
   appearance: none;
   border-radius: 9999px;
-  background: linear-gradient(to right, #164a48, #2fa79f);
+  background: linear-gradient(to right, #9fd8cf, #2fa79f);
   outline-offset: 2px;
 }
 .pelc-speed::-webkit-slider-thumb {
@@ -314,8 +324,8 @@
 
 .pelc-doc {
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.35),
-    0 12px 42px rgba(0, 0, 0, 0.4);
+    0 1px 3px rgba(60, 47, 12, 0.16),
+    0 12px 42px rgba(60, 47, 12, 0.22);
 }
 
 .pelc-checkerboard {
@@ -329,7 +339,7 @@
 }
 
 .pelc-layer-handle {
-  outline: 1.5px solid rgba(217, 182, 74, 0.95);
+  outline: 1.5px solid rgba(154, 118, 20, 0.95);
   outline-offset: 6px;
   cursor: grab;
 }
@@ -337,7 +347,7 @@
   cursor: grabbing;
 }
 .pelc-layer-dim {
-  outline: 1.5px dashed rgba(217, 182, 74, 0.38);
+  outline: 1.5px dashed rgba(154, 118, 20, 0.45);
   outline-offset: 6px;
 }
 
