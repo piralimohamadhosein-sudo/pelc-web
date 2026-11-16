@@ -9,12 +9,15 @@
  * متن هر لایه به قطعه‌های هم‌سبک شکسته می‌شود تا «گونهٔ GSUB / قلم / فرمِ
  * تک‌حرف» واقعاً همان حرف را عوض کند نه کل جمله را.
  *
- * هر کلمهٔ جمله می‌تواند به لایهٔ مستقل تبدیل شود (دکمهٔ «تبدیل به کلماتِ
- * مستقل») و بعد هر کلمه جداگانه کشیده شود یا با جهت‌نماها تکان بخورد.
- * دکمهٔ بیضی زرد «انتخاب همه» همهٔ لایه‌ها را انتخاب می‌کند تا با یک کشیدن
- * همه با هم جابه‌جا شوند؛ Esc یا کلیک روی فضای خالی بوم انتخاب را لغو می‌کند.
- * کشیدن لایه به‌صورت زنده (بدون تاریخچه) پیش‌نمایش می‌شود و در پایان یک‌جا
- * ثبت می‌گردد.
+ * هر کلمهٔ جمله می‌تواند به لایهٔ مستقل تبدیل شود و بعد هر کلمه جداگانه کشیده
+ * شود یا با جهت‌نماها تکان بخورد. دکمهٔ بیضی زرد «انتخاب همه» همهٔ لایه‌ها را
+ * انتخاب می‌کند تا با یک کشیدن همه با هم جابه‌جا شوند؛ Esc یا کلیک روی فضای
+ * خالی بوم انتخاب را لغو می‌کند. کشیدن لایه به‌صورت زنده (بدون تاریخچه)
+ * پیش‌نمایش می‌شود و در پایان یک‌جا ثبت می‌گردد.
+ *
+ * متن با رابط تازه فقط از دو راه می‌آید: دکمهٔ طلایی «+» گوشهٔ پایین بوم
+ * (افزودن متن نو) و دوبارزدن روی لایه (ویرایش متن همان لایه) — هر دو
+ * گفت‌وگوی کوچک متن را باز می‌کنند.
  */
 
 import { useCallback, useEffect, useRef } from "react"
@@ -24,9 +27,11 @@ import { buildTextSegments } from "@/lib/pelc/segments"
 import { tokenizeWords } from "@/lib/pelc/measure"
 import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
-import { BoxSelect } from "lucide-react"
+import { BoxSelect, Plus } from "lucide-react"
 import { GroupScaleBar } from "@/components/pelc/GroupScaleBar"
 import { TouchPad } from "@/components/pelc/TouchPad"
+import { AddTextDialog } from "@/components/pelc/AddTextDialog"
+import { BackgroundPicker } from "@/components/pelc/BackgroundPicker"
 
 const MIN_SCALE_FRACTION = 0.86 // بیشینهٔ عرض نسبی سند داخل مرحله
 
@@ -37,6 +42,7 @@ export function EditorCanvas() {
   const selectLayer = useEditorStore((s) => s.selectLayer)
   const selectAllLayers = useEditorStore((s) => s.selectAllLayers)
   const clearMultiSelect = useEditorStore((s) => s.clearMultiSelect)
+  const openTextDialog = useEditorStore((s) => s.openTextDialog)
   const beginLiveUpdate = useEditorStore((s) => s.beginLiveUpdate)
   const commitLiveUpdate = useEditorStore((s) => s.commitLiveUpdate)
   const nudgeSelectedLayer = useEditorStore((s) => s.nudgeSelectedLayer)
@@ -225,6 +231,8 @@ export function EditorCanvas() {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
+                // دوبارزدن/دوبارکلیک = ویرایش متن همین لایه در گفت‌وگوی متن
+                onDoubleClick={() => openTextDialog(layer.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault()
@@ -265,7 +273,7 @@ export function EditorCanvas() {
         </div>
       </div>
 
-      {/* نوار عمل بوم */}
+      {/* نوار عمل بوم — انتخاب همه + پس‌زمینهٔ سند */}
       <div className="absolute start-2 top-2 flex items-center gap-2">
         <button
           type="button"
@@ -282,7 +290,22 @@ export function EditorCanvas() {
             ? `لغو انتخاب (${selectedLayerIds.length.toLocaleString("fa-IR")})`
             : "انتخاب همه"}
         </button>
+        <BackgroundPicker />
       </div>
+
+      {/* دکمهٔ «+» افزودن متن — تنها راه افزودن متن در رابط تازه */}
+      <button
+        type="button"
+        onClick={() => openTextDialog(null)}
+        aria-label="افزودن متن"
+        title="افزودن متن — بنویسید و کلمه‌ها خودکار جدا می‌شوند"
+        className="absolute bottom-3 start-3 z-20 grid size-12 touch-manipulation place-items-center rounded-full bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-lg ring-1 ring-[#8a6d1f]/60 transition-transform active:scale-90"
+      >
+        <Plus className="size-6" strokeWidth={2.5} aria-hidden />
+      </button>
+
+      {/* گفت‌وگوی افزودن/ویرایش متن */}
+      <AddTextDialog />
 
       {/* نوار مقیاس گروهی — فقط با انتخاب چندگانه ظاهر می‌شود */}
       <GroupScaleBar />
@@ -290,9 +313,9 @@ export function EditorCanvas() {
       {/* تاچ‌پد جابه‌جایی — با انتخاب هر لایه ظاهر می‌شود (مخصوص موبایل) */}
       <TouchPad />
 
-      {/* نوار وضعیت بوم — در موبایل مخفی برای جمع‌وجوری */}
+      {/* نوار وضعیت بوم — در موبایل مخفی برای جمع‌وجوری؛ جای آن از دکمهٔ «+» فاصله دارد */}
       <div
-        className="pointer-events-none absolute bottom-2 start-2 hidden rounded-md border border-border/50 bg-card/80 px-2.5 py-1 text-[11px] text-muted-foreground backdrop-blur-sm sm:block"
+        className="pointer-events-none absolute bottom-2 start-[68px] hidden rounded-md border border-border/50 bg-card/80 px-2.5 py-1 text-[11px] text-muted-foreground backdrop-blur-sm sm:block"
         dir="rtl"
       >
         <span dir="ltr">

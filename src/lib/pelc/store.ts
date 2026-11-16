@@ -44,7 +44,7 @@ const PELC_FONT_IDS = new Set(PELC_FONTS.map((f) => f.id))
 /** کلید localStorage برای فونت‌های ستاره‌دار (علاقه‌مندی) */
 const FAVORITES_KEY = "pelc-favorite-fonts"
 
-export type PanelTab = "layers" | "word" | "letter" | "kashida" | "marks" | "history"
+export type PanelTab = "word" | "letter" | "kashida" | "marks" | "history"
 
 interface EditorState {
   /** سند جاری */
@@ -69,6 +69,15 @@ interface EditorState {
   viewScale: number
   /** فونت‌های ستاره‌دار (علاقه‌مندی کاربر) — بیرون از سند و تاریخچه */
   favoriteFontIds: string[]
+
+  /* --- گفت‌وگوی افزودن/ویرایش متن (دکمهٔ «+») --- */
+  /** باز بودن گفت‌وگوی متن */
+  textDialogOpen: boolean
+  /** لایهٔ در حال ویرایش در گفت‌وگو (null = افزودن لایهٔ تازه) */
+  editingTextLayerId: string | null
+  /** باز کردن گفت‌وگوی متن — با شناسه = ویرایش همان لایه، بدون شناسه = افزودن */
+  openTextDialog: (editLayerId?: string | null) => void
+  closeTextDialog: () => void
 
   /* --- انتخاب --- */
   selectLayer: (id: string) => void
@@ -95,7 +104,8 @@ interface EditorState {
   beginLiveUpdate: (next: PelcDocument) => void
   commitLiveUpdate: (label: string) => void
 
-  addLayer: () => void
+  /** افزودن لایهٔ متنی تازه با متن داده‌شده — در میانهٔ بوم؛ شناسهٔ لایه را برمی‌گرداند */
+  addTextLayer: (text: string) => string | null
   deleteLayer: (id: string) => void
   duplicateLayer: (id: string) => void
 
@@ -104,7 +114,8 @@ interface EditorState {
   /** تکان‌دادن ریز لایهٔ انتخاب‌شده (جهت‌نماها) */
   nudgeSelectedLayer: (dx: number, dy: number) => void
 
-  setLayerText: (text: string) => void
+  /** ویرایش متن یک لایه با شناسه (از گفت‌وگوی متن) */
+  updateLayerText: (id: string, text: string) => void
   setLayerFont: (fontId: string) => void
   setLayerFontSize: (size: number) => void
   setLayerColor: (argb: number) => void
@@ -243,6 +254,12 @@ export const useEditorStore = create<EditorState>((set, get) => {
     viewScale: 0.12,
     favoriteFontIds: [],
 
+    // گفت‌وگوی افزودن/ویرایش متن — بسته به‌صورت پیش‌فرض
+    textDialogOpen: false,
+    editingTextLayerId: null,
+    openTextDialog: (editLayerId) => set({ textDialogOpen: true, editingTextLayerId: editLayerId ?? null }),
+    closeTextDialog: () => set({ textDialogOpen: false, editingTextLayerId: null }),
+
     selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null, selectedLayerIds: [] }),
     selectAllLayers: () =>
       set({
@@ -358,12 +375,24 @@ export const useEditorStore = create<EditorState>((set, get) => {
       syncFromHistory(set, get, doc)
     },
 
-    addLayer: () => {
+    addTextLayer: (text) => {
       const state = get()
-      const layer = newLayer(`لایهٔ ${state.doc.layers.length + 1}`)
+      const trimmed = text.trim()
+      if (!trimmed) return null
+      const layer = newLayer(`متن ${state.doc.layers.length + 1}`)
+      layer.text = { ...layer.text!, text: trimmed }
+      // جای تقریبی: میانهٔ افقی بوم و یک‌سوم بالا — کاربر با کشیدن یا تاچ‌پد دقیق می‌کند
+      layer.transform = {
+        tx: Math.round(state.doc.canvas.width / 2 - 320),
+        ty: Math.round(state.doc.canvas.height / 2 - 120),
+        scaleX: 1,
+        scaleY: 1,
+        rotationDeg: 0,
+      }
       const next: PelcDocument = { ...state.doc, layers: [...state.doc.layers, layer] }
-      state.commit(next, "افزودن لایه")
+      state.commit(next, "افزودن متن")
       set({ selectedLayerId: layer.id, selectedClusterStart: null, selectedLayerIds: [], activeTab: "word" })
+      return layer.id
     },
     deleteLayer: (id) => {
       const state = get()
@@ -448,16 +477,16 @@ export const useEditorStore = create<EditorState>((set, get) => {
       state.commit(next, "تکان‌دادن لایه", `nudge:${layer.id}`)
     },
 
-    setLayerText: (text) => {
+    updateLayerText: (id, text) => {
       const state = get()
-      const layer = findLayer(state.doc, state.selectedLayerId)
+      const layer = findLayer(state.doc, id)
       if (!layer?.text) return
       const perLetter = reconcilePerLetter(text, layer.text.perLetter)
-      const next = withLayer(state.doc, layer.id, (l) => ({
+      const next = withLayer(state.doc, id, (l) => ({
         ...l,
         text: { ...l.text!, text, perLetter },
       }))
-      state.commit(next, "ویرایش متن", `text:${layer.id}`)
+      state.commit(next, "ویرایش متن", `text:${id}`)
     },
     setLayerFont: (fontId) => {
       const state = get()
@@ -665,6 +694,8 @@ export const useEditorStore = create<EditorState>((set, get) => {
         selectedClusterStart: null,
         activeTab: "word",
         stressResult: null,
+        textDialogOpen: false,
+        editingTextLayerId: null,
       })
     },
 

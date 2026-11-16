@@ -1,19 +1,17 @@
 "use client"
 
-/** پوستهٔ پنل ویرایش — شش تب: لایه / واژه / حرف / کشیده / علامت‌ها / تاریخچه */
+/** پوستهٔ پنل ویرایش — پنج تب: واژه / حرف / کشیده / علامت‌ها / تاریخچه */
 
 import { useEditorStore, type PanelTab } from "@/lib/pelc/store"
-import { LayersPanel } from "./panels/LayersPanel"
 import { WordPanel } from "./panels/WordPanel"
 import { LetterPanel } from "./panels/LetterPanel"
 import { KashidaPanel } from "./panels/KashidaPanel"
 import { MarksPanel } from "./panels/MarksPanel"
 import { HistoryPanel } from "./panels/HistoryPanel"
-import { Layers, Type, Shapes, MoveHorizontal, Palette, History } from "lucide-react"
+import { Type, Shapes, MoveHorizontal, Palette, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const TABS: { id: PanelTab; label: string; icon: React.ReactNode }[] = [
-  { id: "layers", label: "لایه", icon: <Layers className="size-4" /> },
   { id: "word", label: "واژه", icon: <Type className="size-4" /> },
   { id: "letter", label: "حرف", icon: <Shapes className="size-4" /> },
   { id: "kashida", label: "کشیده", icon: <MoveHorizontal className="size-4" /> },
@@ -54,7 +52,6 @@ export function Panels() {
         role="tabpanel"
         className="pelc-scroll min-h-0 flex-1 overflow-y-auto p-3"
       >
-        {activeTab === "layers" && <LayersPanel />}
         {activeTab === "word" && <WordPanel />}
         {activeTab === "letter" && <LetterPanel />}
         {activeTab === "kashida" && <KashidaPanel />}

@@ -1,22 +1,21 @@
 "use client"
 
-/** تب «واژه» — ویرایش متن، انتخاب قلم، اندازه و رنگ لایهٔ انتخاب‌شده */
+/** تب «واژه» — قلم، اندازه، رنگ و افکت‌های لایهٔ انتخاب‌شده (متن با دکمهٔ «+» بوم یا دوبارزدن روی لایه ویرایش می‌شود) */
 
 import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, COLOR_SWATCHES, findLayer } from "@/lib/pelc/model"
-import { tokenizeWords } from "@/lib/pelc/measure"
 import { FontPicker } from "@/components/pelc/FontPicker"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { Textarea } from "@/components/ui/textarea"
+import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function WordPanel() {
   const doc = useEditorStore((s) => s.doc)
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId)
   const selectedLayerIds = useEditorStore((s) => s.selectedLayerIds)
-  const setLayerText = useEditorStore((s) => s.setLayerText)
+  const openTextDialog = useEditorStore((s) => s.openTextDialog)
   const setLayerFont = useEditorStore((s) => s.setLayerFont)
   const setLayerFontSize = useEditorStore((s) => s.setLayerFontSize)
   const setLayerColor = useEditorStore((s) => s.setLayerColor)
@@ -24,7 +23,6 @@ export function WordPanel() {
   const setStrokeWidth = useEditorStore((s) => s.setStrokeWidth)
   const setGold = useEditorStore((s) => s.setGold)
   const setShadow = useEditorStore((s) => s.setShadow)
-  const splitLayerIntoWords = useEditorStore((s) => s.splitLayerIntoWords)
 
   const layer = findLayer(doc, selectedLayerId)
   if (!layer?.text) {
@@ -34,36 +32,27 @@ export function WordPanel() {
   // «انتخاب همه» فعال است: رنگ روی همهٔ لایه‌های انتخاب‌شده اعمال می‌شود
   const isMultiSelect = selectedLayerIds.length > 1
 
-  /** جداسازی خودکار کلمه‌ها — بدون دکمه و بدون پرسش؛ هنگام ترک فیلد متن یا Enter */
-  const autoSplitIfMultiWord = () => {
-    if (tokenizeWords(t.text).length >= 2) splitLayerIntoWords(layer.id, { auto: true })
-  }
-
   return (
     <div className="space-y-3">
-      <section className="space-y-1.5">
-        <Label htmlFor="layer-text" className="text-xs font-semibold">
-          متن لایه
-        </Label>
-        <Textarea
-          id="layer-text"
-          dir="rtl"
-          rows={2}
-          className="text-base leading-relaxed"
-          value={t.text}
-          onChange={(e) => setLayerText(e.target.value)}
-          onBlur={autoSplitIfMultiWord}
-          onKeyDown={(e) => {
-            // Enter = پایان جمله و جداسازی خودکار کلمه‌ها (Shift+Enter = خط جدید)
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault()
-              e.currentTarget.blur()
-            }
-          }}
-          placeholder="مثلاً: بسم الله الرحمن الرحیم"
-        />
+      {/* متن دیگر فیلد نیست — فقط یک ردیف کوچک: نمایش متن + ویرایش */}
+      <section className="space-y-1.5 rounded-lg border bg-card p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-xs font-semibold">متن لایه</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[11px]"
+            onClick={() => openTextDialog(layer.id)}
+            title="ویرایش متن این لایه — یا دوبار روی لایه در بوم بزنید"
+          >
+            <Pencil className="size-3" /> ویرایش
+          </Button>
+        </div>
+        <p className="truncate text-sm" title={t.text}>
+          {t.text || <span className="text-muted-foreground">— خالی —</span>}
+        </p>
         <p className="text-[10px] leading-3.5 text-muted-foreground">
-          جمله را بنویسید — کلمه‌ها خودکار به لایه‌های مستقل جدا می‌شوند و هر کلمه جداگانه جابه‌جا می‌شود.
+          افزودن متن تازه با دکمهٔ «+» بوم؛ ویرایش با دوبارزدن روی لایه.
         </p>
       </section>
 
