@@ -24,7 +24,7 @@ import { buildTextSegments } from "@/lib/pelc/segments"
 import { tokenizeWords } from "@/lib/pelc/measure"
 import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
-import { BoxSelect, SplitSquareHorizontal } from "lucide-react"
+import { BoxSelect } from "lucide-react"
 import { GroupScaleBar } from "@/components/pelc/GroupScaleBar"
 import { TouchPad } from "@/components/pelc/TouchPad"
 
@@ -39,7 +39,6 @@ export function EditorCanvas() {
   const clearMultiSelect = useEditorStore((s) => s.clearMultiSelect)
   const beginLiveUpdate = useEditorStore((s) => s.beginLiveUpdate)
   const commitLiveUpdate = useEditorStore((s) => s.commitLiveUpdate)
-  const splitLayerIntoWords = useEditorStore((s) => s.splitLayerIntoWords)
   const nudgeSelectedLayer = useEditorStore((s) => s.nudgeSelectedLayer)
   const setViewScale = useEditorStore((s) => s.setViewScale)
   const viewScale = useEditorStore((s) => s.viewScale)
@@ -69,6 +68,25 @@ export function EditorCanvas() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [doc.canvas.width, doc.canvas.height, setViewScale])
+
+  // جداسازی خودکار جملهٔ پیش‌فرض در نخستین اجرای سندِ دست‌نخورده — پس از
+  // آماده‌شدن فونت‌ها تا اندازه‌گیری جای کلمه‌ها دقیق باشد. اگر کاربر قبلاً
+  // کاری کرده باشد (تاریخچه غیرخالی)، دخالت نمی‌کند.
+  useEffect(() => {
+    let cancelled = false
+    void document.fonts.ready.then(() => {
+      if (cancelled) return
+      const st = useEditorStore.getState()
+      if (st.canUndo || st.canRedo) return
+      const first = st.doc.layers[0]
+      if (!first?.text || first.locked) return
+      if (tokenizeWords(first.text.text).length < 2) return
+      st.splitLayerIntoWords(first.id, { auto: true })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // تکان‌دادن با جهت‌نماها (Shift = ده برابر) — بیرون از فیلدهای متنی
   useEffect(() => {
@@ -155,9 +173,6 @@ export function EditorCanvas() {
     dragState.current = null
     if (d?.moved) commitLiveUpdate(d.bases.length > 1 ? "جابه‌جایی گروهی لایه‌ها" : "جابه‌جایی لایه")
   }, [commitLiveUpdate])
-
-  const selectedLayer = findLayer(doc, selectedLayerId)
-  const canSplit = Boolean(selectedLayer?.text && tokenizeWords(selectedLayer.text.text).length >= 2)
 
   const docW = doc.canvas.width * viewScale
   const docH = doc.canvas.height * viewScale
@@ -266,16 +281,6 @@ export function EditorCanvas() {
           {selectedLayerIds.length > 0
             ? `لغو انتخاب (${selectedLayerIds.length.toLocaleString("fa-IR")})`
             : "انتخاب همه"}
-        </button>
-        <button
-          type="button"
-          disabled={!canSplit}
-          onClick={() => selectedLayerId && splitLayerIntoWords(selectedLayerId)}
-          className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/85 px-3 py-1.5 text-xs font-medium text-foreground/90 shadow-sm backdrop-blur-sm transition-colors hover:bg-card disabled:cursor-not-allowed disabled:opacity-40"
-          title="هر کلمه به یک لایهٔ مستقل تبدیل می‌شود تا جداگانه کشیده و تکان داده شود"
-        >
-          <SplitSquareHorizontal className="size-4" />
-          تبدیل به کلماتِ مستقل
         </button>
       </div>
 

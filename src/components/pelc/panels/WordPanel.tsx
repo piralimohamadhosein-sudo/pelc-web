@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { SplitSquareHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function WordPanel() {
@@ -32,9 +31,13 @@ export function WordPanel() {
     return <p className="text-sm text-muted-foreground">لایهٔ انتخاب‌شده متنی ندارد.</p>
   }
   const t = layer.text
-  const wordCount = tokenizeWords(t.text).length
   // «انتخاب همه» فعال است: رنگ روی همهٔ لایه‌های انتخاب‌شده اعمال می‌شود
   const isMultiSelect = selectedLayerIds.length > 1
+
+  /** جداسازی خودکار کلمه‌ها — بدون دکمه و بدون پرسش؛ هنگام ترک فیلد متن یا Enter */
+  const autoSplitIfMultiWord = () => {
+    if (tokenizeWords(t.text).length >= 2) splitLayerIntoWords(layer.id, { auto: true })
+  }
 
   return (
     <div className="space-y-3">
@@ -49,26 +52,20 @@ export function WordPanel() {
           className="text-base leading-relaxed"
           value={t.text}
           onChange={(e) => setLayerText(e.target.value)}
+          onBlur={autoSplitIfMultiWord}
+          onKeyDown={(e) => {
+            // Enter = پایان جمله و جداسازی خودکار کلمه‌ها (Shift+Enter = خط جدید)
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              e.currentTarget.blur()
+            }
+          }}
           placeholder="مثلاً: بسم الله الرحمن الرحیم"
         />
+        <p className="text-[10px] leading-3.5 text-muted-foreground">
+          جمله را بنویسید — کلمه‌ها خودکار به لایه‌های مستقل جدا می‌شوند و هر کلمه جداگانه جابه‌جا می‌شود.
+        </p>
       </section>
-
-      {wordCount >= 2 && (
-        <section className="space-y-1.5 rounded-lg border border-primary/40 bg-accent/40 p-2">
-          <Label className="text-xs font-semibold">کلمات مستقل</Label>
-          <p className="text-[11px] leading-4 text-muted-foreground">
-            این متن {wordCount.toLocaleString("fa-IR")} کلمه دارد — با این دکمه هر کلمه یک لایهٔ مستقل می‌شود تا جداگانه جابه‌جا شود.
-          </p>
-          <button
-            type="button"
-            onClick={() => splitLayerIntoWords(layer.id)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            <SplitSquareHorizontal className="size-4" />
-            تبدیل به کلماتِ مستقل
-          </button>
-        </section>
-      )}
 
       <section className="space-y-1.5">
         <Label className="text-xs font-semibold">قلم</Label>

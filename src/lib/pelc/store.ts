@@ -100,7 +100,7 @@ interface EditorState {
   duplicateLayer: (id: string) => void
 
   /** تبدیل جملهٔ لایه به لایه‌های تک‌کلمه‌ای در همان جای فعلی */
-  splitLayerIntoWords: (id: string) => boolean
+  splitLayerIntoWords: (id: string, opts?: { auto?: boolean }) => boolean
   /** تکان‌دادن ریز لایهٔ انتخاب‌شده (جهت‌نماها) */
   nudgeSelectedLayer: (dx: number, dy: number) => void
 
@@ -386,7 +386,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
       set({ selectedLayerId: copy.id, selectedClusterStart: null, selectedLayerIds: [] })
     },
 
-    splitLayerIntoWords: (id) => {
+    splitLayerIntoWords: (id, opts) => {
       const state = get()
       const layer = findLayer(state.doc, id)
       if (!layer?.text) return false
@@ -415,7 +415,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
       const idx = state.doc.layers.findIndex((l) => l.id === id)
       const layers = [...state.doc.layers]
       layers.splice(idx, 1, ...wordLayers)
-      state.commit({ ...state.doc, layers }, "تبدیل جمله به کلماتِ مستقل")
+      state.commit(
+        { ...state.doc, layers },
+        opts?.auto ? "جدا شدن خودکار کلمه‌های جمله" : "تبدیل جمله به کلماتِ مستقل",
+      )
       set({ selectedLayerId: wordLayers[0].id, selectedClusterStart: null, selectedLayerIds: [] })
       return true
     },
