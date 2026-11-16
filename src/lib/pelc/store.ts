@@ -112,6 +112,8 @@ interface EditorState {
   /** حذف همهٔ لایه‌های انتخاب‌شده (تکی یا انتخاب همه) در یک گام تاریخچه */
   deleteSelectedLayers: () => void
   duplicateLayer: (id: string) => void
+  /** تغییر اندازهٔ بوم (صفحهٔ کار) — عرض/ارتفاع پیکسل و dpi؛ در محدودهٔ ۱۰۰ تا ۸۰۰۰ */
+  setCanvasSize: (width: number, height: number, dpi?: number) => void
 
   /** تبدیل جملهٔ لایه به لایه‌های تک‌کلمه‌ای در همان جای فعلی */
   splitLayerIntoWords: (id: string, opts?: { auto?: boolean }) => boolean
@@ -720,6 +722,15 @@ export const useEditorStore = create<EditorState>((set, get) => {
         background: { color, transparent: transparent ?? state.doc.background.transparent },
       }
       state.commit(next, "پس‌زمینهٔ سند")
+    },
+    setCanvasSize: (width, height, dpi) => {
+      const state = get()
+      const w = Math.min(8000, Math.max(100, Math.round(width)))
+      const h = Math.min(8000, Math.max(100, Math.round(height)))
+      const d = dpi === undefined ? state.doc.canvas.dpi : Math.min(1200, Math.max(36, Math.round(dpi)))
+      if (w === state.doc.canvas.width && h === state.doc.canvas.height && d === state.doc.canvas.dpi) return
+      const next: PelcDocument = { ...state.doc, canvas: { width: w, height: h, dpi: d } }
+      state.commit(next, "اندازهٔ بوم")
     },
     resetDocument: () => {
       const doc = newDocument()

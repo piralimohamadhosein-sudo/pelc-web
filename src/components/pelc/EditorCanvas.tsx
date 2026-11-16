@@ -34,6 +34,7 @@ import { TouchPad } from "@/components/pelc/TouchPad"
 import { AddTextDialog } from "@/components/pelc/AddTextDialog"
 import { ImageAddDialog } from "@/components/pelc/ImageAddDialog"
 import { BackgroundPicker } from "@/components/pelc/BackgroundPicker"
+import { CanvasSizePicker } from "@/components/pelc/CanvasSizePicker"
 import { getImageAsset } from "@/lib/pelc/images"
 
 const MIN_SCALE_FRACTION = 0.86 // بیشینهٔ عرض نسبی سند داخل مرحله
@@ -457,6 +458,7 @@ export function EditorCanvas() {
             : "انتخاب همه"}
         </button>
         <BackgroundPicker />
+        <CanvasSizePicker />
         {/* حذف لایهٔ انتخاب‌شده — کلمه یا عکس؛ با انتخاب چندگانه همه با هم در یک گام */}
         {(() => {
           const sel = findLayer(doc, selectedLayerId)
