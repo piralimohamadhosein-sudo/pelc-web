@@ -157,19 +157,19 @@ export function TouchPad() {
   return (
     <div
       dir="rtl"
-      className="absolute bottom-3 left-3 z-20 w-[132px] touch-none select-none rounded-2xl border border-primary/45 bg-card/85 p-1.5 shadow-lg backdrop-blur sm:w-[148px]"
+      className="absolute bottom-3 left-3 z-20 w-[104px] touch-none select-none rounded-xl border border-primary/45 bg-card/85 p-1 shadow-lg backdrop-blur sm:w-[118px]"
       role="group"
       aria-label="تاچ‌پد لمسی جابه‌جایی لایه"
     >
       {/* سرستون — عنوان و بازخورد وضعیت */}
-      <div className="mb-1 flex h-4 items-center justify-between px-0.5">
-        <span className="text-[10px] font-bold leading-none text-foreground/90">تاچ‌پد</span>
+      <div className="mb-0.5 flex h-3.5 items-center justify-between px-0.5">
+        <span className="text-[9px] font-bold leading-none text-foreground/90">تاچ‌پد</span>
         {selectedCount > 1 ? (
-          <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold leading-none text-accent-foreground shadow-sm">
+          <span className="rounded-full bg-accent px-1 py-0.5 text-[8px] font-bold leading-none text-accent-foreground shadow-sm">
             همه با هم
           </span>
         ) : offset && dragging ? (
-          <span dir="ltr" className="text-[9px] leading-none tabular-nums text-muted-foreground">
+          <span dir="ltr" className="text-[8px] leading-none tabular-nums text-muted-foreground">
             {fa(offset.x)} ، {fa(offset.y)}
           </span>
         ) : null}
@@ -178,7 +178,7 @@ export function TouchPad() {
       {/* سطح لمسی — انگشت را بکشید */}
       <div
         ref={surfaceRef}
-        className="pelc-pad-surface relative h-[76px] touch-none overflow-hidden rounded-xl border border-border/70 bg-black/25 transition-colors active:border-primary/70"
+        className="pelc-pad-surface relative h-[56px] touch-none overflow-hidden rounded-lg border border-border/70 bg-black/25 transition-colors active:border-primary/70"
         aria-label="سطح لمسی جابه‌جایی — انگشت را روی سطح بکشید"
         title="انگشت را روی سطح بکشید — لایه هم‌جهت با انگشت جابه‌جا می‌شود"
         onPointerDown={onPointerDown}
@@ -190,7 +190,7 @@ export function TouchPad() {
         {/* راهنمای مرکز — هنگام کشیدن پنهان می‌شود */}
         <Move
           className={cn(
-            "pointer-events-none absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 text-foreground/30 transition-opacity",
+            "pointer-events-none absolute left-1/2 top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 text-foreground/30 transition-opacity",
             dragging && "opacity-0",
           )}
           aria-hidden
@@ -199,7 +199,7 @@ export function TouchPad() {
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_7px_rgba(217,182,74,0.85)]",
+            "pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_6px_rgba(217,182,74,0.85)]",
             dragging ? "transition-[left,top] duration-75" : "transition-[left,top] duration-300",
           )}
           style={cursor ? { left: cursor.x, top: cursor.y } : { left: "50%", top: "50%" }}
@@ -207,8 +207,8 @@ export function TouchPad() {
       </div>
 
       {/* لغزندهٔ سرعت */}
-      <div className="mt-1 flex items-center gap-1.5" dir="ltr">
-        <span dir="rtl" className="shrink-0 text-[9px] font-medium leading-none text-muted-foreground">
+      <div className="mt-0.5 flex items-center gap-1" dir="ltr">
+        <span dir="rtl" className="shrink-0 text-[8px] font-medium leading-none text-muted-foreground">
           سرعت
         </span>
         <input
@@ -220,9 +220,9 @@ export function TouchPad() {
           onChange={(e) => changeSpeed(Number.parseFloat(e.target.value))}
           aria-label="سرعت تاچ‌پد"
           title="سرعت جابه‌جایی — از ۰٫۲۵ تا ۴ برابر"
-          className="pelc-speed h-1.5 min-w-0 flex-1 cursor-pointer"
+          className="pelc-speed h-1 min-w-0 flex-1 cursor-pointer"
         />
-        <span className="w-10 shrink-0 text-center text-[10px] font-extrabold leading-none text-primary">
+        <span className="w-8 shrink-0 text-center text-[9px] font-extrabold leading-none text-primary">
           ×{speed.toLocaleString("fa-IR", { maximumFractionDigits: 2 })}
         </span>
       </div>
