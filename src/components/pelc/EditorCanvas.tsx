@@ -15,22 +15,24 @@
  * خالی بوم انتخاب را لغو می‌کند. کشیدن لایه به‌صورت زنده (بدون تاریخچه)
  * پیش‌نمایش می‌شود و در پایان یک‌جا ثبت می‌گردد.
  *
- * متن با رابط تازه فقط از دو راه می‌آید: دکمهٔ طلایی «+» گوشهٔ پایین بوم
- * (افزودن متن نو) و دوبارزدن روی لایه (ویرایش متن همان لایه) — هر دو
- * گفت‌وگوی کوچک متن را باز می‌کنند.
+ * افزودن محتوا از یک دروازهٔ واحد می‌آید: دکمهٔ طلایی «+» گوشهٔ پایین بوم
+ * که با کلیک، منوی پلکانی باز می‌کند — «افزودن متن» با برچسب فارسی و
+ * «افزودن عکس» فقط به شکل لوگو. ویرایش متن هر لایه هم با دوبارزدن روی آن
+ * در همان گفت‌وگوی متن انجام می‌شود.
  */
 
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useEditorStore } from "@/lib/pelc/store"
 import { argbToCss, findLayer } from "@/lib/pelc/model"
 import { buildTextSegments } from "@/lib/pelc/segments"
 import { tokenizeWords } from "@/lib/pelc/measure"
 import { fontCssFamily, fontById } from "@/lib/pelc/fonts"
 import { layerTextStyle } from "@/lib/pelc/export"
-import { BoxSelect, Plus, Trash2 } from "lucide-react"
+import { BoxSelect, ImagePlus, Plus, Trash2, Type } from "lucide-react"
 import { GroupScaleBar } from "@/components/pelc/GroupScaleBar"
 import { TouchPad } from "@/components/pelc/TouchPad"
 import { AddTextDialog } from "@/components/pelc/AddTextDialog"
+import { ImageAddDialog } from "@/components/pelc/ImageAddDialog"
 import { BackgroundPicker } from "@/components/pelc/BackgroundPicker"
 import { getImageAsset } from "@/lib/pelc/images"
 
@@ -58,6 +60,10 @@ export function EditorCanvas() {
   const setViewScale = useEditorStore((s) => s.setViewScale)
   const viewScale = useEditorStore((s) => s.viewScale)
   const deleteLayer = useEditorStore((s) => s.deleteLayer)
+
+  // منوی پلکانی «+» — افزودن متن/عکس از یک دروازهٔ واحد
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [imageOpen, setImageOpen] = useState(false)
 
   const stageRef = useRef<HTMLDivElement>(null)
   const dragState = useRef<{
@@ -119,8 +125,9 @@ export function EditorCanvas() {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
       if (target && (target.closest("input, textarea, select") || target.isContentEditable)) return
-      // Esc = لغو انتخاب چندگانه
+      // Esc = لغو انتخاب چندگانه / بستن منوی افزودن
       if (e.key === "Escape") {
+        setAddMenuOpen(false)
         if (useEditorStore.getState().selectedLayerIds.length > 0) {
           e.preventDefault()
           clearMultiSelect()
@@ -468,19 +475,76 @@ export function EditorCanvas() {
         })()}
       </div>
 
-      {/* دکمهٔ «+» افزودن متن — تنها راه افزودن متن در رابط تازه */}
+      {/* لایهٔ بستن منو — کلیک بیرون از منوی پلکانی آن را می‌بندد */}
+      {addMenuOpen && (
+        <button
+          type="button"
+          aria-label="بستن منوی افزودن"
+          tabIndex={-1}
+          onClick={() => setAddMenuOpen(false)}
+          className="fixed inset-0 z-10 cursor-default"
+        />
+      )}
+
+      {/* منوی پلکانی «+» — افزودن عکس به شکل لوگو (پلهٔ بالاتر، جابه‌شده به داخل) */}
       <button
         type="button"
-        onClick={() => openTextDialog(null)}
+        onClick={() => {
+          setAddMenuOpen(false)
+          setImageOpen(true)
+        }}
+        aria-label="افزودن عکس"
+        title="افزودن عکس — عکس‌نوشته: متن‌های آمادهٔ شما روی عکس می‌نشینند"
+        className={`absolute bottom-[124px] start-10 z-30 grid size-11 touch-manipulation place-items-center rounded-full bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-lg ring-1 ring-[#8a6d1f]/60 transition-all duration-200 ease-out ${
+          addMenuOpen
+            ? "pointer-events-auto translate-y-0 scale-100 opacity-100 delay-150"
+            : "pointer-events-none translate-y-2 scale-75 opacity-0"
+        }`}
+      >
+        <ImagePlus className="size-5" strokeWidth={2.25} aria-hidden />
+      </button>
+
+      {/* منوی پلکانی «+» — افزودن متن با برچسب فارسی (پلهٔ پایین‌تر) */}
+      <button
+        type="button"
+        onClick={() => {
+          setAddMenuOpen(false)
+          openTextDialog(null)
+        }}
         aria-label="افزودن متن"
         title="افزودن متن — بنویسید و کلمه‌ها خودکار جدا می‌شوند"
-        className="absolute bottom-3 start-3 z-20 grid size-12 touch-manipulation place-items-center rounded-full bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-lg ring-1 ring-[#8a6d1f]/60 transition-transform active:scale-90"
+        className={`absolute bottom-[68px] start-3 z-30 flex h-11 touch-manipulation items-center gap-1.5 rounded-full bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] px-3.5 text-[#2a1f06] shadow-lg ring-1 ring-[#8a6d1f]/60 transition-all duration-200 ease-out ${
+          addMenuOpen
+            ? "pointer-events-auto translate-y-0 scale-100 opacity-100 delay-75"
+            : "pointer-events-none translate-y-2 scale-75 opacity-0"
+        }`}
       >
-        <Plus className="size-6" strokeWidth={2.5} aria-hidden />
+        <Type className="size-5" strokeWidth={2.25} aria-hidden />
+        <span className="text-sm font-bold">افزودن متن</span>
+      </button>
+
+      {/* دکمهٔ «+» — دروازهٔ واحد افزودن؛ با کلیک منوی پلکانی متن/عکس را باز می‌کند */}
+      <button
+        type="button"
+        onClick={() => setAddMenuOpen((v) => !v)}
+        aria-label={addMenuOpen ? "بستن منوی افزودن" : "افزودن متن یا عکس"}
+        aria-expanded={addMenuOpen}
+        aria-haspopup="menu"
+        title="افزودن متن یا عکس"
+        className="absolute bottom-3 start-3 z-30 grid size-12 touch-manipulation place-items-center rounded-full bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-lg ring-1 ring-[#8a6d1f]/60 transition-transform active:scale-90"
+      >
+        <Plus
+          className={`size-6 transition-transform duration-200 ${addMenuOpen ? "rotate-45" : ""}`}
+          strokeWidth={2.5}
+          aria-hidden
+        />
       </button>
 
       {/* گفت‌وگوی افزودن/ویرایش متن */}
       <AddTextDialog />
+
+      {/* گفت‌وگوی افزودن عکس — از منوی پلکانی «+» باز می‌شود */}
+      <ImageAddDialog open={imageOpen} onOpenChange={setImageOpen} />
 
       {/* نوار مقیاس گروهی — فقط با انتخاب چندگانه ظاهر می‌شود */}
       <GroupScaleBar />

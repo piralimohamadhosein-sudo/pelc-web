@@ -9,14 +9,13 @@ import { useEffect, useState } from "react"
 import { EditorCanvas } from "@/components/pelc/EditorCanvas"
 import { Panels } from "@/components/pelc/Panels"
 import { SaveDialog } from "@/components/pelc/SaveDialog"
-import { ImageAddDialog } from "@/components/pelc/ImageAddDialog"
 import { WelcomeDialog, WELCOME_SEEN_KEY } from "@/components/pelc/WelcomeDialog"
 import { SupportDialog } from "@/components/pelc/SupportDialog"
 import { Shamsa } from "@/components/pelc/Shamsa"
 import { useEditorStore } from "@/lib/pelc/store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Undo2, Redo2, Save, ImagePlus, MessageCircle } from "lucide-react"
+import { Undo2, Redo2, Save, MessageCircle } from "lucide-react"
 
 export default function Home() {
   const doc = useEditorStore((s) => s.doc)
@@ -27,7 +26,6 @@ export default function Home() {
   const setDocTitle = useEditorStore((s) => s.setDocTitle)
   const hydrateFavoriteFonts = useEditorStore((s) => s.hydrateFavoriteFonts)
   const [saveOpen, setSaveOpen] = useState(false)
-  const [imageOpen, setImageOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
   // پیام خوش‌آمد فقط بار اول نمایش داده می‌شود؛ پس از بستن در localStorage ثبت می‌شود
   const [welcomeOpen, setWelcomeOpen] = useState(false)
@@ -137,16 +135,6 @@ export default function Home() {
             >
               <MessageCircle className="size-4" /> پشتیبانی
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="افزودن عکس"
-              title="افزودن عکس — ساخت عکس‌نوشته: متن‌ها روی عکس می‌نشینند"
-              onClick={() => setImageOpen(true)}
-              className="h-8 px-2.5 text-xs"
-            >
-              <ImagePlus className="size-4" /> افزودن عکس
-            </Button>
           </div>
         </div>
         <div className="pelc-girih-strip" aria-hidden="true" />
@@ -166,7 +154,6 @@ export default function Home() {
       </main>
 
       <SaveDialog open={saveOpen} onOpenChange={setSaveOpen} />
-      <ImageAddDialog open={imageOpen} onOpenChange={setImageOpen} />
       <WelcomeDialog open={welcomeOpen} onOpenChange={handleWelcomeOpenChange} />
       <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
     </div>

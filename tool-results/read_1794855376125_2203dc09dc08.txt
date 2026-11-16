@@ -1,0 +1,842 @@
+     1→     1→/**
+     2→     2→ * استور ویرایشگر پلک — معماری UDF مانند EditorViewModel.kt اندروید:
+     3→     3→ * هر تغییر سند از طریق تاریخچه (EditorHistory) می‌گذرد؛ کشیدن لایه روی بوم
+     4→     4→ * به‌صورت زنده (بدون تاریخچه) پیش‌نمایش می‌شود و در پایان یک‌جا ثبت می‌گردد.
+     5→     5→ */
+     6→     6→
+     7→     7→"use client"
+     8→     8→
+     9→     9→import { create } from "zustand"
+    10→    10→import {
+    11→    11→  defaultLetterOverride,
+    12→    12→  findLayer,
+    13→    13→  isDefaultOverride,
+    14→    14→  LETTER_FORM_TITLES,
+    15→    15→  newId,
+    16→    16→  newDocument,
+    17→    17→  newLayer,
+    18→    18→  normalizeLetterForm,
+    19→    19→  withLayer,
+    20→    20→  type Layer,
+    21→    21→  type LetterForm,
+    22→    22→  type LetterOverride,
+    23→    23→  type MarkType,
+    24→    24→  type PelcDocument,
+    25→    25→} from "./model"
+    26→    26→import { measureWordPositions, slicePerLetter, tokenizeWords } from "./measure"
+    27→    27→import {
+    28→    28→  insertKashidaBefore,
+    29→    29→  insertMarkAfter,
+    30→    30→  letterClusters,
+    31→    31→  MAX_KASHIDA_BEFORE,
+    32→    32→  reconcilePerLetter,
+    33→    33→  remapPerLetter,
+    34→    34→  removeKashidaBefore,
+    35→    35→  removeMarkAt,
+    36→    36→  type LetterCluster,
+    37→    37→  type TextMutation,
+    38→    38→} from "./arabicText"
+    39→    39→import { EditorHistory, DEFAULT_CAPACITY } from "./history"
+    40→    40→import { PELC_FONTS } from "./fonts"
+    41→    41→
+    42→    42→const PELC_FONT_IDS = new Set(PELC_FONTS.map((f) => f.id))
+    43→    43→
+    44→    44→/** کلید localStorage برای فونت‌های ستاره‌دار (علاقه‌مندی) */
+    45→    45→const FAVORITES_KEY = "pelc-favorite-fonts"
+    46→    46→
+    47→    47→export type PanelTab = "word" | "letter" | "kashida" | "marks" | "history"
+    48→    48→
+    49→    49→interface EditorState {
+    50→    50→  /** سند جاری */
+    51→    51→  doc: PelcDocument
+    52→    52→  /** نسخهٔ تاریخچه برای رندر مجدد (خود تاریخچه بیرون از استور است) */
+    53→    53→  historyVersion: number
+    54→    54→  stepCount: number
+    55→    55→  position: number
+    56→    56→  canUndo: boolean
+    57→    57→  canRedo: boolean
+    58→    58→  labels: string[]
+    59→    59→  /** شناسهٔ لایهٔ انتخاب‌شده (انتخاب اصلی — پنل‌ها با همین کار می‌کنند) */
+    60→    60→  selectedLayerId: string | null
+    61→    61→  /** انتخاب چندگانه: شناسهٔ همهٔ لایه‌های انتخاب‌شده (خالی = انتخاب تکی) */
+    62→    62→  selectedLayerIds: string[]
+    63→    63→  /** اندیس UTF-16 آغازِ کلاستر حرف انتخاب‌شده (یا null) */
+    64→    64→  selectedClusterStart: number | null
+    65→    65→  activeTab: PanelTab
+    66→    66→  /** پیام آزمون استرس تاریخچه */
+    67→    67→  stressResult: string | null
+    68→    68→  /** ضریب نمایش فعلی بوم (برای اندازه‌گیری‌های DOM) */
+    69→    69→  viewScale: number
+    70→    70→  /** فونت‌های ستاره‌دار (علاقه‌مندی کاربر) — بیرون از سند و تاریخچه */
+    71→    71→  favoriteFontIds: string[]
+    72→    72→
+    73→    73→  /* --- گفت‌وگوی افزودن/ویرایش متن (دکمهٔ «+») --- */
+    74→    74→  /** باز بودن گفت‌وگوی متن */
+    75→    75→  textDialogOpen: boolean
+    76→    76→  /** لایهٔ در حال ویرایش در گفت‌وگو (null = افزودن لایهٔ تازه) */
+    77→    77→  editingTextLayerId: string | null
+    78→    78→  /** باز کردن گفت‌وگوی متن — با شناسه = ویرایش همان لایه، بدون شناسه = افزودن */
+    79→    79→  openTextDialog: (editLayerId?: string | null) => void
+    80→    80→  closeTextDialog: () => void
+    81→    81→
+    82→    82→  /* --- انتخاب --- */
+    83→    83→  selectLayer: (id: string) => void
+    84→    84→  /** انتخاب همهٔ لایه‌ها برای جابه‌جایی گروهی راحت */
+    85→    85→  selectAllLayers: () => void
+    86→    86→  /** لغو انتخاب چندگانه */
+    87→    87→  clearMultiSelect: () => void
+    88→    88→  selectLetter: (clusterStart: number | null) => void
+    89→    89→  setActiveTab: (tab: PanelTab) => void
+    90→    90→  setViewScale: (scale: number) => void
+    91→    91→  /** ستاره‌زدن/برداشتن ستارهٔ یک فونت */
+    92→    92→  toggleFavoriteFont: (id: string) => void
+    93→    93→  /** خواندن علاقه‌مندی‌ها از localStorage — فقط سمت مرورگر، یک‌بار هنگام راه‌اندازی */
+    94→    94→  hydrateFavoriteFonts: () => void
+    95→    95→
+    96→    96→  /* --- تاریخچه --- */
+    97→    97→  undo: () => void
+    98→    98→  redo: () => void
+    99→    99→  jumpTo: (index: number) => void
+   100→   100→  runStressTest: () => void
+   101→   101→
+   102→   102→  /* --- ویرایش سند --- */
+   103→   103→  commit: (next: PelcDocument, label: string, coalesceKey?: string) => void
+   104→   104→  beginLiveUpdate: (next: PelcDocument) => void
+   105→   105→  commitLiveUpdate: (label: string) => void
+   106→   106→
+   107→   107→  /** افزودن لایهٔ متنی تازه با متن داده‌شده — در میانهٔ بوم؛ شناسهٔ لایه را برمی‌گرداند */
+   108→   108→  addTextLayer: (text: string) => string | null
+   109→   109→  /** افزودن لایهٔ عکس (عکس‌نوشته) — در پس‌زمینهٔ بوم، زیر همهٔ متن‌ها؛ پوشش کامل بوم */
+   110→   110→  addImageLayer: (assetId: string, width: number, height: number) => void
+   111→   111→  deleteLayer: (id: string) => void
+   112→   112→  duplicateLayer: (id: string) => void
+   113→   113→
+   114→   114→  /** تبدیل جملهٔ لایه به لایه‌های تک‌کلمه‌ای در همان جای فعلی */
+   115→   115→  splitLayerIntoWords: (id: string, opts?: { auto?: boolean }) => boolean
+   116→   116→  /** تکان‌دادن ریز لایهٔ انتخاب‌شده (جهت‌نماها) */
+   117→   117→  nudgeSelectedLayer: (dx: number, dy: number) => void
+   118→   118→
+   119→   119→  /** ویرایش متن یک لایه با شناسه (از گفت‌وگوی متن) */
+   120→   120→  updateLayerText: (id: string, text: string) => void
+   121→   121→  setLayerFont: (fontId: string) => void
+   122→   122→  setLayerFontSize: (size: number) => void
+   123→   123→  setLayerColor: (argb: number) => void
+   124→   124→  setLayerOpacity: (opacity: number) => void
+   125→   125→  setLayerVisibility: (visible: boolean) => void
+   126→   126→  setFillMode: (mode: Layer["style"]["fillMode"]) => void
+   127→   127→  setStrokeWidth: (w: number) => void
+   128→   128→  setGold: (enabled: boolean) => void
+   129→   129→  setShadow: (enabled: boolean) => void
+   130→   130→  setTransform: (t: Partial<Layer["transform"]>) => void
+   131→   131→  setDocTitle: (title: string) => void
+   132→   132→  setBackground: (color: number, transparent?: boolean) => void
+   133→   133→  resetDocument: () => void
+   134→   134→
+   135→   135→  /* --- ویرایش حرف --- */
+   136→   136→  setLetterVariant: (tag: string | null) => void
+   137→   137→  setLetterForm: (form: LetterForm) => void
+   138→   138→  setLetterFont: (fontId: string | null) => void
+   139→   139→  insertKashida: () => void
+   140→   140→  removeKashida: () => void
+   141→   141→  addMark: (type: MarkType) => void
+   142→   142→  removeMark: (markIndex: number) => void
+   143→   143→
+   144→   144→  /* --- کمکی‌ها --- */
+   145→   145→  clusters: () => LetterCluster[]
+   146→   146→}
+   147→   147→
+   148→   148→/** تاریخچه بیرون از استور نگه داشته می‌شود (عکس‌فوری‌ها عمق‌نمایی نمی‌خواهند) */
+   149→   149→let history: EditorHistory | null = null
+   150→   150→let liveDoc: PelcDocument | null = null
+   151→   151→
+   152→   152→function ensureHistory(initial: PelcDocument): EditorHistory {
+   153→   153→  if (!history) history = new EditorHistory(initial, DEFAULT_CAPACITY)
+   154→   154→  return history
+   155→   155→}
+   156→   156→
+   157→   157→/** اعمال سند تازه از تاریخچه + حفظ انتخاب‌های معتبر */
+   158→   158→function syncFromHistory(
+   159→   159→  set: (partial: Partial<EditorState>) => void,
+   160→   160→  get: () => EditorState,
+   161→   161→  doc: PelcDocument,
+   162→   162→) {
+   163→   163→  const h = history!
+   164→   164→  const sel = get().selectedLayerId
+   165→   165→  const layer = doc.layers.some((l) => l.id === sel) ? sel : (doc.layers[0]?.id ?? null)
+   166→   166→  // حفظ انتخاب چندگانهٔ معتبر — شناسه‌های حذف‌شده کنار می‌روند
+   167→   167→  const multi = get().selectedLayerIds.filter((id) => doc.layers.some((l) => l.id === id))
+   168→   168→  const keepStart = get().selectedClusterStart
+   169→   169→  let nextStart = keepStart
+   170→   170→  if (keepStart !== null) {
+   171→   171→    const l = doc.layers.find((x) => x.id === layer)
+   172→   172→    const text = l?.text?.text ?? ""
+   173→   173→    if (!l?.text || !letterClusters(text).some((c) => c.start === keepStart)) nextStart = null
+   174→   174→  }
+   175→   175→  set({
+   176→   176→    doc,
+   177→   177→    historyVersion: h.version,
+   178→   178→    stepCount: h.stepCount,
+   179→   179→    position: h.position,
+   180→   180→    canUndo: h.canUndo,
+   181→   181→    canRedo: h.canRedo,
+   182→   182→    labels: h.labels(),
+   183→   183→    selectedLayerId: layer,
+   184→   184→    selectedLayerIds: multi,
+   185→   185→    selectedClusterStart: nextStart,
+   186→   186→  })
+   187→   187→}
+   188→   188→
+   189→   189→function markChar(type: MarkType): string {
+   190→   190→  const table: Record<MarkType, string> = {
+   191→   191→    FATHA: "\u064E",
+   192→   192→    DAMMA: "\u064F",
+   193→   193→    KASRA: "\u0650",
+   194→   194→    SHADDA: "\u0651",
+   195→   195→    SUKUN: "\u0652",
+   196→   196→    FATHATAN: "\u064B",
+   197→   197→    DAMMATAN: "\u064C",
+   198→   198→    KASRATAN: "\u064D",
+   199→   199→  }
+   200→   200→  return table[type]
+   201→   201→}
+   202→   202→
+   203→   203→function markTitle(type: MarkType): string {
+   204→   204→  const table: Record<MarkType, string> = {
+   205→   205→    FATHA: "فتحه",
+   206→   206→    DAMMA: "ضمه",
+   207→   207→    KASRA: "کسره",
+   208→   208→    SHADDA: "تشدید",
+   209→   209→    SUKUN: "سکون",
+   210→   210→    FATHATAN: "تنوین فتح",
+   211→   211→    DAMMATAN: "تنوین ضم",
+   212→   212→    KASRATAN: "تنوین کسر",
+   213→   213→  }
+   214→   214→  return table[type]
+   215→   215→}
+   216→   216→
+   217→   217→export const useEditorStore = create<EditorState>((set, get) => {
+   218→   218→  /** اعمال جهش متن با بازنگاشت perLetter و پیگیری انتخاب حرف */
+   219→   219→  const commitTextMutation = (mutation: TextMutation, label: string, extraPerLetter?: Record<string, LetterOverride>) => {
+   220→   220→    const state = get()
+   221→   221→    const layer = findLayer(state.doc, state.selectedLayerId)
+   222→   222→    if (!layer?.text) return
+   223→   223→    const base = extraPerLetter ?? layer.text.perLetter
+   224→   224→    const perLetter = remapPerLetter(base, mutation)
+   225→   225→    const next = withLayer(state.doc, layer.id, (l) => ({
+   226→   226→      ...l,
+   227→   227→      text: { ...l.text!, text: mutation.newText, perLetter },
+   228→   228→    }))
+   229→   229→    const keepStart = state.selectedClusterStart
+   230→   230→    state.commit(next, label)
+   231→   231→    if (keepStart !== null) {
+   232→   232→      const mapped = keepStart >= mutation.shiftFrom ? keepStart + mutation.delta : keepStart
+   233→   233→      const clusters = letterClusters(mutation.newText)
+   234→   234→      if (clusters.some((c) => c.start === mapped)) {
+   235→   235→        set({ selectedClusterStart: mapped })
+   236→   236→      }
+   237→   237→    }
+   238→   238→  }
+   239→   239→
+   240→   240→  const initialDoc = newDocument()
+   241→   241→  history = new EditorHistory(initialDoc, DEFAULT_CAPACITY)
+   242→   242→
+   243→   243→  return {
+   244→   244→    doc: initialDoc,
+   245→   245→    historyVersion: 0,
+   246→   246→    stepCount: 0,
+   247→   247→    position: 0,
+   248→   248→    canUndo: false,
+   249→   249→    canRedo: false,
+   250→   250→    labels: [],
+   251→   251→    selectedLayerId: initialDoc.layers[0]?.id ?? null,
+   252→   252→    selectedLayerIds: [],
+   253→   253→    selectedClusterStart: null,
+   254→   254→    activeTab: "word",
+   255→   255→    stressResult: null,
+   256→   256→    viewScale: 0.12,
+   257→   257→    favoriteFontIds: [],
+   258→   258→
+   259→   259→    // گفت‌وگوی افزودن/ویرایش متن — بسته به‌صورت پیش‌فرض
+   260→   260→    textDialogOpen: false,
+   261→   261→    editingTextLayerId: null,
+   262→   262→    openTextDialog: (editLayerId) => set({ textDialogOpen: true, editingTextLayerId: editLayerId ?? null }),
+   263→   263→    closeTextDialog: () => set({ textDialogOpen: false, editingTextLayerId: null }),
+   264→   264→
+   265→   265→    selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null, selectedLayerIds: [] }),
+   266→   266→    selectAllLayers: () =>
+   267→   267→      set({
+   268→   268→        // لایه‌های قفل‌شده را نمی‌شود کشید؛ در انتخاب‌همه نمی‌آیند
+   269→   269→        selectedLayerIds: get().doc.layers.filter((l) => !l.locked).map((l) => l.id),
+   270→   270→        selectedClusterStart: null,
+   271→   271→      }),
+   272→   272→    clearMultiSelect: () => set({ selectedLayerIds: [] }),
+   273→   273→    selectLetter: (clusterStart) => set({ selectedClusterStart: clusterStart }),
+   274→   274→    setActiveTab: (tab) => set({ activeTab: tab }),
+   275→   275→    setViewScale: (scale) => set({ viewScale: scale }),
+   276→   276→    toggleFavoriteFont: (id) => {
+   277→   277→      if (!PELC_FONT_IDS.has(id)) return
+   278→   278→      const cur = get().favoriteFontIds
+   279→   279→      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]
+   280→   280→      if (typeof window !== "undefined") {
+   281→   281→        try {
+   282→   282→          window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
+   283→   283→        } catch {
+   284→   284→          /* حافظه در دسترس نیست (مثلاً حالت خصوصی) — فقط در حافظهٔ نشست */
+   285→   285→        }
+   286→   286→      }
+   287→   287→      set({ favoriteFontIds: next })
+   288→   288→    },
+   289→   289→    hydrateFavoriteFonts: () => {
+   290→   290→      if (typeof window === "undefined") return
+   291→   291→      try {
+   292→   292→        const raw = window.localStorage.getItem(FAVORITES_KEY)
+   293→   293→        if (!raw) return
+   294→   294→        const parsed: unknown = JSON.parse(raw)
+   295→   295→        if (!Array.isArray(parsed)) return
+   296→   296→        // فقط شناسه‌های معتبر مخزن قلم پذیرفته می‌شوند
+   297→   297→        set({
+   298→   298→          favoriteFontIds: parsed.filter(
+   299→   299→            (x): x is string => typeof x === "string" && PELC_FONT_IDS.has(x),
+   300→   300→          ),
+   301→   301→        })
+   302→   302→      } catch {
+   303→   303→        /* دادهٔ خراب — نادیده گرفته می‌شود */
+   304→   304→      }
+   305→   305→    },
+   306→   306→
+   307→   307→    undo: () => {
+   308→   308→      const h = ensureHistory(get().doc)
+   309→   309→      const doc = h.undo()
+   310→   310→      if (doc) syncFromHistory(set, get, doc)
+   311→   311→    },
+   312→   312→    redo: () => {
+   313→   313→      const h = ensureHistory(get().doc)
+   314→   314→      const doc = h.redo()
+   315→   315→      if (doc) syncFromHistory(set, get, doc)
+   316→   316→    },
+   317→   317→    jumpTo: (index) => {
+   318→   318→      const h = ensureHistory(get().doc)
+   319→   319→      const doc = h.jumpTo(index)
+   320→   320→      syncFromHistory(set, get, doc)
+   321→   321→    },
+   322→   322→    runStressTest: () => {
+   323→   323→      // معیار پذیرش پروژه: ۵۰۰ عمل متوالی بدون خطا + واگرد تا سند آغازین
+   324→   324→      const h = ensureHistory(get().doc)
+   325→   325→      let doc = get().doc
+   326→   326→      const layerId = doc.layers[0]?.id
+   327→   327→      if (!layerId) {
+   328→   328→        set({ stressResult: "سند بدون لایه است" })
+   329→   329→        return
+   330→   330→      }
+   331→   331→      try {
+   332→   332→        const t0 = performance.now()
+   333→   333→        for (let i = 0; i < 500; i++) {
+   334→   334→          const kashida = "\u0640".repeat((i % 3) + 1)
+   335→   335→          const next = withLayer(doc, layerId, (cur) => ({
+   336→   336→            ...cur,
+   337→   337→            text: { ...cur.text!, text: `آزمونِ تاریخچه ${i + 1}${kashida}` },
+   338→   338→          }))
+   339→   339→          doc = h.apply(next, `گام آزمون ${i + 1}`)
+   340→   340→        }
+   341→   341→        const elapsed = Math.round(performance.now() - t0)
+   342→   342→        syncFromHistory(set, get, doc)
+   343→   343→        // بررسی واگرد کامل
+   344→   344→        let ok = true
+   345→   345→        for (let i = 0; i < 500; i++) {
+   346→   346→          const d = h.undo()
+   347→   347→          if (d === null) { ok = false; break }
+   348→   348→        }
+   349→   349→        const backToBase = h.position === 0
+   350→   350→        set({
+   351→   351→          stressResult: `موفق: ۵۰۰ گام در ${elapsed} میلی‌ثانیه ثبت شد (ظرفیت ${DEFAULT_CAPACITY}). واگرد کامل تا سند آغازین: ${ok && backToBase ? "بله" : "خیر"}`,
+   352→   352→        })
+   353→   353→        // بازگشت به آخرین وضعیت
+   354→   354→        for (let i = 0; i < 500; i++) {
+   355→   355→          if (!h.redo()) break
+   356→   356→        }
+   357→   357→        syncFromHistory(set, get, h.current)
+   358→   358→      } catch (e) {
+   359→   359→        set({ stressResult: `خطا: ${e instanceof Error ? e.message : String(e)}` })
+   360→   360→      }
+   361→   361→    },
+   362→   362→
+   363→   363→    commit: (next, label, coalesceKey) => {
+   364→   364→      const h = ensureHistory(next)
+   365→   365→      const doc = h.apply(next, label, coalesceKey ?? null)
+   366→   366→      syncFromHistory(set, get, doc)
+   367→   367→    },
+   368→   368→    beginLiveUpdate: (next) => {
+   369→   369→      liveDoc = next
+   370→   370→      set({ doc: next })
+   371→   371→    },
+   372→   372→    commitLiveUpdate: (label) => {
+   373→   373→      if (!liveDoc) return
+   374→   374→      const h = ensureHistory(liveDoc)
+   375→   375→      const doc = h.push(liveDoc, label)
+   376→   376→      liveDoc = null
+   377→   377→      syncFromHistory(set, get, doc)
+   378→   378→    },
+   379→   379→
+   380→   380→    addTextLayer: (text) => {
+   381→   381→      const state = get()
+   382→   382→      const trimmed = text.trim()
+   383→   383→      if (!trimmed) return null
+   384→   384→      const layer = newLayer(`متن ${state.doc.layers.length + 1}`)
+   385→   385→      layer.text = { ...layer.text!, text: trimmed }
+   386→   386→      // جای تقریبی: میانهٔ افقی بوم و یک‌سوم بالا — کاربر با کشیدن یا تاچ‌پد دقیق می‌کند
+   387→   387→      layer.transform = {
+   388→   388→        tx: Math.round(state.doc.canvas.width / 2 - 320),
+   389→   389→        ty: Math.round(state.doc.canvas.height / 2 - 120),
+   390→   390→        scaleX: 1,
+   391→   391→        scaleY: 1,
+   392→   392→        rotationDeg: 0,
+   393→   393→      }
+   394→   394→      const next: PelcDocument = { ...state.doc, layers: [...state.doc.layers, layer] }
+   395→   395→      state.commit(next, "افزودن متن")
+   396→   396→      set({ selectedLayerId: layer.id, selectedClusterStart: null, selectedLayerIds: [], activeTab: "word" })
+   397→   397→      return layer.id
+   398→   398→    },
+   399→   399→    addImageLayer: (assetId, width, height) => {
+   400→   400→      const state = get()
+   401→   401→      const layer = newLayer("عکس")
+   402→   402→      layer.kind = "IMAGE"
+   403→   403→      layer.text = null
+   404→   404→      layer.image = { assetId, width, height }
+   405→   405→      // پوشش کامل بوم (cover) وسط‌چین — متن‌های آماده روی آن می‌نشینند؛
+   406→   406→      // کاربر با کشیدن جابه‌جا و با دستگیره‌های گوشه بزرگ/کوچک می‌کند.
+   407→   407→      const s = Math.max(state.doc.canvas.width / width, state.doc.canvas.height / height)
+   408→   408→      layer.transform = {
+   409→   409→        tx: Math.round((state.doc.canvas.width - width * s) / 2),
+   410→   410→        ty: Math.round((state.doc.canvas.height - height * s) / 2),
+   411→   411→        scaleX: s,
+   412→   412→        scaleY: s,
+   413→   413→        rotationDeg: 0,
+   414→   414→      }
+   415→   415→      // پایین‌ترین ترتیب — زیر همهٔ لایه‌های متنی تا متن روی عکس بیفتد
+   416→   416→      const next: PelcDocument = { ...state.doc, layers: [layer, ...state.doc.layers] }
+   417→   417→      state.commit(next, "افزودن عکس")
+   418→   418→      set({ selectedLayerId: layer.id, selectedClusterStart: null, selectedLayerIds: [] })
+   419→   419→    },
+   420→   420→    deleteLayer: (id) => {
+   421→   421→      const state = get()
+   422→   422→      if (state.doc.layers.length <= 1) return
+   423→   423→      const next: PelcDocument = { ...state.doc, layers: state.doc.layers.filter((l) => l.id !== id) }
+   424→   424→      state.commit(next, "حذف لایه")
+   425→   425→      set({ selectedLayerIds: state.selectedLayerIds.filter((x) => x !== id) })
+   426→   426→    },
+   427→   427→    duplicateLayer: (id) => {
+   428→   428→      const state = get()
+   429→   429→      const src = state.doc.layers.find((l) => l.id === id)
+   430→   430→      if (!src) return
+   431→   431→      const copy: Layer = JSON.parse(JSON.stringify(src))
+   432→   432→      copy.id = `${src.id}-copy-${Date.now()}`
+   433→   433→      copy.name = `${src.name} (کپی)`
+   434→   434→      const idx = state.doc.layers.findIndex((l) => l.id === id)
+   435→   435→      const layers = [...state.doc.layers]
+   436→   436→      layers.splice(idx + 1, 0, copy)
+   437→   437→      state.commit({ ...state.doc, layers }, "تکثیر لایه")
+   438→   438→      set({ selectedLayerId: copy.id, selectedClusterStart: null, selectedLayerIds: [] })
+   439→   439→    },
+   440→   440→
+   441→   441→    splitLayerIntoWords: (id, opts) => {
+   442→   442→      const state = get()
+   443→   443→      const layer = findLayer(state.doc, id)
+   444→   444→      if (!layer?.text) return false
+   445→   445→      const tokens = tokenizeWords(layer.text.text)
+   446→   446→      if (tokens.length < 2) return false
+   447→   447→      const boxes = measureWordPositions(layer, state.viewScale)
+   448→   448→      if (!boxes) return false
+   449→   449→
+   450→   450→      const wordLayers: Layer[] = tokens.map((tk, i) => {
+   451→   451→        const copy: Layer = JSON.parse(JSON.stringify(layer))
+   452→   452→        copy.id = newId()
+   453→   453→        copy.name = `کلمه: ${tk.token.slice(0, 16)}`
+   454→   454→        copy.text = {
+   455→   455→          ...layer.text!,
+   456→   456→          text: tk.token,
+   457→   457→          perLetter: slicePerLetter(layer.text!.perLetter, tk.rawStart, tk.token.length),
+   458→   458→        }
+   459→   459→        copy.transform = {
+   460→   460→          ...layer.transform,
+   461→   461→          tx: Math.round(layer.transform.tx + boxes[i].x),
+   462→   462→          ty: Math.round(layer.transform.ty + boxes[i].y),
+   463→   463→        }
+   464→   464→        return copy
+   465→   465→      })
+   466→   466→
+   467→   467→      const idx = state.doc.layers.findIndex((l) => l.id === id)
+   468→   468→      const layers = [...state.doc.layers]
+   469→   469→      layers.splice(idx, 1, ...wordLayers)
+   470→   470→      state.commit(
+   471→   471→        { ...state.doc, layers },
+   472→   472→        opts?.auto ? "جدا شدن خودکار کلمه‌های جمله" : "تبدیل جمله به کلماتِ مستقل",
+   473→   473→      )
+   474→   474→      set({ selectedLayerId: wordLayers[0].id, selectedClusterStart: null, selectedLayerIds: [] })
+   475→   475→      return true
+   476→   476→    },
+   477→   477→
+   478→   478→    nudgeSelectedLayer: (dx, dy) => {
+   479→   479→      const state = get()
+   480→   480→      // انتخاب چندگانه فعال است: همه با هم تکان می‌خورند (یک گام تاریخچه)
+   481→   481→      if (state.selectedLayerIds.length > 1) {
+   482→   482→        const ids = new Set(state.selectedLayerIds)
+   483→   483→        const next: PelcDocument = {
+   484→   484→          ...state.doc,
+   485→   485→          layers: state.doc.layers.map((l) =>
+   486→   486→            ids.has(l.id) && !l.locked
+   487→   487→              ? { ...l, transform: { ...l.transform, tx: l.transform.tx + dx, ty: l.transform.ty + dy } }
+   488→   488→              : l,
+   489→   489→          ),
+   490→   490→        }
+   491→   491→        state.commit(next, "تکان‌دادن همهٔ لایه‌ها", "nudge:multi")
+   492→   492→        return
+   493→   493→      }
+   494→   494→      const layer = findLayer(state.doc, state.selectedLayerId)
+   495→   495→      if (!layer) return
+   496→   496→      const next = withLayer(state.doc, layer.id, (l) => ({
+   497→   497→        ...l,
+   498→   498→        transform: { ...l.transform, tx: l.transform.tx + dx, ty: l.transform.ty + dy },
+   499→   499→      }))
+   500→   500→      state.commit(next, "تکان‌دادن لایه", `nudge:${layer.id}`)
+   501→   501→    },
+   502→   502→
+   503→   503→    updateLayerText: (id, text) => {
+   504→   504→      const state = get()
+   505→   505→      const layer = findLayer(state.doc, id)
+   506→   506→      if (!layer?.text) return
+   507→   507→      const perLetter = reconcilePerLetter(text, layer.text.perLetter)
+   508→   508→      const next = withLayer(state.doc, id, (l) => ({
+   509→   509→        ...l,
+   510→   510→        text: { ...l.text!, text, perLetter },
+   511→   511→      }))
+   512→   512→      state.commit(next, "ویرایش متن", `text:${id}`)
+   513→   513→    },
+   514→   514→    setLayerFont: (fontId) => {
+   515→   515→      const state = get()
+   516→   516→      if (!PELC_FONT_IDS.has(fontId)) return
+   517→   517→      // انتخاب چندگانه فعال است («انتخاب همه»): یک قلم روی همهٔ لایه‌های
+   518→   518→      // انتخاب‌شده اعمال می‌شود؛ لایه‌های قفل‌شده و بی‌متن مستثنا هستند —
+   519→   519→      // همان الگوی رنگ گروهی، یک گام تاریخچه با کلید ادغام.
+   520→   520→      if (state.selectedLayerIds.length > 1) {
+   521→   521→        const ids = new Set(state.selectedLayerIds)
+   522→   522→        const next: PelcDocument = {
+   523→   523→          ...state.doc,
+   524→   524→          layers: state.doc.layers.map((l) =>
+   525→   525→            ids.has(l.id) && !l.locked && l.text ? { ...l, text: { ...l.text, fontId } } : l,
+   526→   526→          ),
+   527→   527→        }
+   528→   528→        state.commit(next, "قلم همهٔ لایه‌های انتخاب‌شده", "font:multi")
+   529→   529→        return
+   530→   530→      }
+   531→   531→      const layer = findLayer(state.doc, state.selectedLayerId)
+   532→   532→      if (!layer) return
+   533→   533→      const next = withLayer(state.doc, layer.id, (l) =>
+   534→   534→        l.text ? { ...l, text: { ...l.text, fontId } } : l,
+   535→   535→      )
+   536→   536→      state.commit(next, "تغییر قلم")
+   537→   537→    },
+   538→   538→    setLayerFontSize: (size) => {
+   539→   539→      const state = get()
+   540→   540→      const layer = findLayer(state.doc, state.selectedLayerId)
+   541→   541→      if (!layer) return
+   542→   542→      const next = withLayer(state.doc, layer.id, (l) =>
+   543→   543→        l.text ? { ...l, text: { ...l.text, fontSize: size } } : l,
+   544→   544→      )
+   545→   545→      state.commit(next, "اندازهٔ قلم", `size:${layer.id}`)
+   546→   546→    },
+   547→   547→    setLayerColor: (argb) => {
+   548→   548→      const state = get()
+   549→   549→      // انتخاب چندگانه فعال است («انتخاب همه»): یک رنگ روی همهٔ لایه‌های
+   550→   550→      // انتخاب‌شده اعمال می‌شود؛ لایه‌های قفل‌شده مستثنا هستند — همان الگوی
+   551→   551→      // تکان‌دادن گروهی، یک گام تاریخچه با کلید ادغام برای رنگ‌گیر پیوسته.
+   552→   552→      if (state.selectedLayerIds.length > 1) {
+   553→   553→        const ids = new Set(state.selectedLayerIds)
+   554→   554→        const next: PelcDocument = {
+   555→   555→          ...state.doc,
+   556→   556→          layers: state.doc.layers.map((l) =>
+   557→   557→            ids.has(l.id) && !l.locked
+   558→   558→              ? {
+   559→   559→                  ...l,
+   560→   560→                  style: { ...l.style, color: argb },
+   561→   561→                  text: l.text ? { ...l.text, color: argb } : l.text,
+   562→   562→                }
+   563→   563→              : l,
+   564→   564→          ),
+   565→   565→        }
+   566→   566→        state.commit(next, "رنگ همهٔ لایه‌های انتخاب‌شده", "color:multi")
+   567→   567→        return
+   568→   568→      }
+   569→   569→      const layer = findLayer(state.doc, state.selectedLayerId)
+   570→   570→      if (!layer) return
+   571→   571→      const next = withLayer(state.doc, layer.id, (l) => ({
+   572→   572→        ...l,
+   573→   573→        style: { ...l.style, color: argb },
+   574→   574→        text: l.text ? { ...l.text, color: argb } : l.text,
+   575→   575→      }))
+   576→   576→      state.commit(next, "رنگ لایه")
+   577→   577→    },
+   578→   578→    setLayerOpacity: (opacity) => {
+   579→   579→      const state = get()
+   580→   580→      const layer = findLayer(state.doc, state.selectedLayerId)
+   581→   581→      if (!layer) return
+   582→   582→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, opacity }))
+   583→   583→      state.commit(next, "شفافیت لایه", `opacity:${layer.id}`)
+   584→   584→    },
+   585→   585→    setLayerVisibility: (visible) => {
+   586→   586→      const state = get()
+   587→   587→      const layer = findLayer(state.doc, state.selectedLayerId)
+   588→   588→      if (!layer) return
+   589→   589→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, visible }))
+   590→   590→      state.commit(next, visible ? "نمایش لایه" : "پنهان‌کردن لایه")
+   591→   591→    },
+   592→   592→    setFillMode: (mode) => {
+   593→   593→      const state = get()
+   594→   594→      // انتخاب چندگانه فعال است («انتخاب همه»): حالت پرکردن روی همهٔ لایه‌های
+   595→   595→      // انتخاب‌شده اعمال می‌شود؛ لایه‌های قفل‌شده مستثنا هستند.
+   596→   596→      if (state.selectedLayerIds.length > 1) {
+   597→   597→        const ids = new Set(state.selectedLayerIds)
+   598→   598→        const next: PelcDocument = {
+   599→   599→          ...state.doc,
+   600→   600→          layers: state.doc.layers.map((l) =>
+   601→   601→            ids.has(l.id) && !l.locked ? { ...l, style: { ...l.style, fillMode: mode } } : l,
+   602→   602→          ),
+   603→   603→        }
+   604→   604→        state.commit(next, "حالت پرکردن همهٔ لایه‌ها", "fill:multi")
+   605→   605→        return
+   606→   606→      }
+   607→   607→      const layer = findLayer(state.doc, state.selectedLayerId)
+   608→   608→      if (!layer) return
+   609→   609→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, style: { ...l.style, fillMode: mode } }))
+   610→   610→      state.commit(next, "حالت پرکردن")
+   611→   611→    },
+   612→   612→    setStrokeWidth: (w) => {
+   613→   613→      const state = get()
+   614→   614→      if (state.selectedLayerIds.length > 1) {
+   615→   615→        const ids = new Set(state.selectedLayerIds)
+   616→   616→        const next: PelcDocument = {
+   617→   617→          ...state.doc,
+   618→   618→          layers: state.doc.layers.map((l) =>
+   619→   619→            ids.has(l.id) && !l.locked ? { ...l, style: { ...l.style, strokeWidth: w } } : l,
+   620→   620→          ),
+   621→   621→        }
+   622→   622→        state.commit(next, "ضخامت خط دور همهٔ لایه‌ها", "stroke:multi")
+   623→   623→        return
+   624→   624→      }
+   625→   625→      const layer = findLayer(state.doc, state.selectedLayerId)
+   626→   626→      if (!layer) return
+   627→   627→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, style: { ...l.style, strokeWidth: w } }))
+   628→   628→      state.commit(next, "ضخامت خط دور", `stroke:${layer.id}`)
+   629→   629→    },
+   630→   630→    setGold: (enabled) => {
+   631→   631→      const state = get()
+   632→   632→      const applyGold = (l: Layer): Layer => ({
+   633→   633→        ...l,
+   634→   634→        style: {
+   635→   635→          ...l.style,
+   636→   636→          fillMode: enabled ? "GOLD" : l.style.fillMode === "GOLD" ? "SOLID" : l.style.fillMode,
+   637→   637→          gold: { enabled, innerColor: 0xffffd700, outerColor: 0xff8a5a00 },
+   638→   638→        },
+   639→   639→      })
+   640→   640→      if (state.selectedLayerIds.length > 1) {
+   641→   641→        const ids = new Set(state.selectedLayerIds)
+   642→   642→        const next: PelcDocument = {
+   643→   643→          ...state.doc,
+   644→   644→          layers: state.doc.layers.map((l) => (ids.has(l.id) && !l.locked ? applyGold(l) : l)),
+   645→   645→        }
+   646→   646→        state.commit(
+   647→   647→          next,
+   648→   648→          enabled ? "افکت طلایی همهٔ لایه‌ها روشن" : "افکت طلایی همهٔ لایه‌ها خاموش",
+   649→   649→          "gold:multi",
+   650→   650→        )
+   651→   651→        return
+   652→   652→      }
+   653→   653→      const layer = findLayer(state.doc, state.selectedLayerId)
+   654→   654→      if (!layer) return
+   655→   655→      const next = withLayer(state.doc, layer.id, applyGold)
+   656→   656→      state.commit(next, enabled ? "افکت طلایی روشن" : "افکت طلایی خاموش")
+   657→   657→    },
+   658→   658→    setShadow: (enabled) => {
+   659→   659→      const state = get()
+   660→   660→      if (state.selectedLayerIds.length > 1) {
+   661→   661→        const ids = new Set(state.selectedLayerIds)
+   662→   662→        const next: PelcDocument = {
+   663→   663→          ...state.doc,
+   664→   664→          layers: state.doc.layers.map((l) =>
+   665→   665→            ids.has(l.id) && !l.locked
+   666→   666→              ? {
+   667→   667→                  ...l,
+   668→   668→                  style: { ...l.style, shadow: enabled ? { radius: 24, dx: 0, dy: 12, color: 0x66000000 } : null },
+   669→   669→                }
+   670→   670→              : l,
+   671→   671→          ),
+   672→   672→        }
+   673→   673→        state.commit(next, enabled ? "سایهٔ همهٔ لایه‌ها روشن" : "سایهٔ همهٔ لایه‌ها خاموش", "shadow:multi")
+   674→   674→        return
+   675→   675→      }
+   676→   676→      const layer = findLayer(state.doc, state.selectedLayerId)
+   677→   677→      if (!layer) return
+   678→   678→      const next = withLayer(state.doc, layer.id, (l) => ({
+   679→   679→        ...l,
+   680→   680→        style: { ...l.style, shadow: enabled ? { radius: 24, dx: 0, dy: 12, color: 0x66000000 } : null },
+   681→   681→      }))
+   682→   682→      state.commit(next, enabled ? "سایه روشن" : "سایه خاموش")
+   683→   683→    },
+   684→   684→    setTransform: (t) => {
+   685→   685→      const state = get()
+   686→   686→      const layer = findLayer(state.doc, state.selectedLayerId)
+   687→   687→      if (!layer) return
+   688→   688→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, transform: { ...l.transform, ...t } }))
+   689→   689→      state.commit(next, "جابه‌جایی لایه", `move:${layer.id}`)
+   690→   690→    },
+   691→   691→    setDocTitle: (title) => {
+   692→   692→      const state = get()
+   693→   693→      state.commit({ ...state.doc, title }, "عنوان سند", "doc-title")
+   694→   694→    },
+   695→   695→    setBackground: (color, transparent) => {
+   696→   696→      const state = get()
+   697→   697→      const next: PelcDocument = {
+   698→   698→        ...state.doc,
+   699→   699→        background: { color, transparent: transparent ?? state.doc.background.transparent },
+   700→   700→      }
+   701→   701→      state.commit(next, "پس‌زمینهٔ سند")
+   702→   702→    },
+   703→   703→    resetDocument: () => {
+   704→   704→      const doc = newDocument()
+   705→   705→      history = new EditorHistory(doc, DEFAULT_CAPACITY)
+   706→   706→      liveDoc = null
+   707→   707→      set({
+   708→   708→        doc,
+   709→   709→        historyVersion: 0,
+   710→   710→        stepCount: 0,
+   711→   711→        position: 0,
+   712→   712→        canUndo: false,
+   713→   713→        canRedo: false,
+   714→   714→        labels: [],
+   715→   715→        selectedLayerId: doc.layers[0]?.id ?? null,
+   716→   716→        selectedLayerIds: [],
+   717→   717→        selectedClusterStart: null,
+   718→   718→        activeTab: "word",
+   719→   719→        stressResult: null,
+   720→   720→        textDialogOpen: false,
+   721→   721→        editingTextLayerId: null,
+   722→   722→      })
+   723→   723→    },
+   724→   724→
+   725→   725→    setLetterVariant: (tag) => {
+   726→   726→      const state = get()
+   727→   727→      const layer = findLayer(state.doc, state.selectedLayerId)
+   728→   728→      const start = state.selectedClusterStart
+   729→   729→      if (!layer?.text || start === null) return
+   730→   730→      const key = String(start)
+   731→   731→      const existing: LetterOverride = layer.text.perLetter[key] ?? defaultLetterOverride()
+   732→   732→      const updated: LetterOverride = { ...existing, variantTag: tag }
+   733→   733→      const perLetter = { ...layer.text.perLetter }
+   734→   734→      if (tag === null && isDefaultOverride(updated)) {
+   735→   735→        delete perLetter[key]
+   736→   736→      } else {
+   737→   737→        perLetter[key] = updated
+   738→   738→      }
+   739→   739→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, text: { ...l.text!, perLetter } }))
+   740→   740→      state.commit(next, tag ? `گونهٔ ${tag} روی حرف` : "حذف گونهٔ حرف")
+   741→   741→    },
+   742→   742→    setLetterForm: (form) => {
+   743→   743→      const state = get()
+   744→   744→      const layer = findLayer(state.doc, state.selectedLayerId)
+   745→   745→      const start = state.selectedClusterStart
+   746→   746→      if (!layer?.text || start === null) return
+   747→   747→      const key = String(start)
+   748→   748→      const existing: LetterOverride = layer.text.perLetter[key] ?? defaultLetterOverride()
+   749→   749→      const updated: LetterOverride = { ...existing, formOverride: form === "AUTO" ? null : normalizeLetterForm(form) }
+   750→   750→      const perLetter = { ...layer.text.perLetter }
+   751→   751→      if (isDefaultOverride(updated)) delete perLetter[key]
+   752→   752→      else perLetter[key] = updated
+   753→   753→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, text: { ...l.text!, perLetter } }))
+   754→   754→      state.commit(next, form === "AUTO" ? "بازگشت فرم حرف به خودکار" : `فرم حرف: ${LETTER_FORM_TITLES[form]}`)
+   755→   755→    },
+   756→   756→    setLetterFont: (fontId) => {
+   757→   757→      const state = get()
+   758→   758→      const layer = findLayer(state.doc, state.selectedLayerId)
+   759→   759→      const start = state.selectedClusterStart
+   760→   760→      if (!layer?.text || start === null) return
+   761→   761→      if (fontId !== null && !PELC_FONT_IDS.has(fontId)) return
+   762→   762→      const key = String(start)
+   763→   763→      const existing: LetterOverride = layer.text.perLetter[key] ?? defaultLetterOverride()
+   764→   764→      const updated: LetterOverride = { ...existing, fontId }
+   765→   765→      const perLetter = { ...layer.text.perLetter }
+   766→   766→      if (isDefaultOverride(updated)) delete perLetter[key]
+   767→   767→      else perLetter[key] = updated
+   768→   768→      const next = withLayer(state.doc, layer.id, (l) => ({ ...l, text: { ...l.text!, perLetter } }))
+   769→   769→      state.commit(next, fontId ? "قلمِ این حرف" : "حذف قلمِ اختصاصی حرف")
+   770→   770→    },
+   771→   771→    insertKashida: () => {
+   772→   772→      const state = get()
+   773→   773→      const layer = findLayer(state.doc, state.selectedLayerId)
+   774→   774→      const start = state.selectedClusterStart
+   775→   775→      if (!layer?.text || start === null) return
+   776→   776→      const cluster = letterClusters(layer.text.text).find((c) => c.start === start)
+   777→   777→      if (!cluster) return
+   778→   778→      if (cluster.kashidaBefore >= MAX_KASHIDA_BEFORE) return
+   779→   779→      const mutation = insertKashidaBefore(layer.text.text, start)
+   780→   780→      if (!mutation) return
+   781→   781→      commitTextMutation(mutation, "درج کشیده")
+   782→   782→    },
+   783→   783→    removeKashida: () => {
+   784→   784→      const state = get()
+   785→   785→      const layer = findLayer(state.doc, state.selectedLayerId)
+   786→   786→      const start = state.selectedClusterStart
+   787→   787→      if (!layer?.text || start === null) return
+   788→   788→      const mutation = removeKashidaBefore(layer.text.text, start)
+   789→   789→      if (!mutation) return
+   790→   790→      commitTextMutation(mutation, "حذف کشیده")
+   791→   791→    },
+   792→   792→    addMark: (type) => {
+   793→   793→      const state = get()
+   794→   794→      const layer = findLayer(state.doc, state.selectedLayerId)
+   795→   795→      const start = state.selectedClusterStart
+   796→   796→      if (!layer?.text || start === null) return
+   797→   797→      const mutation = insertMarkAfter(layer.text.text, start, markChar(type))
+   798→   798→      if (!mutation) return
+   799→   799→      // رکورد تنظیم علامت در perLetter.marks ثبت می‌شود (سازگار با مدل اندروید)
+   800→   800→      const key = String(start)
+   801→   801→      const existing = layer.text.perLetter[key] ?? defaultLetterOverride()
+   802→   802→      const perLetter0 = {
+   803→   803→        ...layer.text.perLetter,
+   804→   804→        [key]: { ...existing, marks: [...existing.marks, { type, dx: 0, dy: 0, scale: 1 }] },
+   805→   805→      }
+   806→   806→      commitTextMutation(mutation, `افزودن ${markTitle(type)}`, perLetter0)
+   807→   807→    },
+   808→   808→    removeMark: (markIndex) => {
+   809→   809→      const state = get()
+   810→   810→      const layer = findLayer(state.doc, state.selectedLayerId)
+   811→   811→      const start = state.selectedClusterStart
+   812→   812→      if (!layer?.text || start === null) return
+   813→   813→      const mutation = removeMarkAt(layer.text.text, start, markIndex)
+   814→   814→      if (!mutation) return
+   815→   815→      const key = String(start)
+   816→   816→      const existing = layer.text.perLetter[key]
+   817→   817→      const perLetter0 = { ...layer.text.perLetter }
+   818→   818→      if (existing) {
+   819→   819→        const updated = { ...existing, marks: existing.marks.filter((_, i) => i !== markIndex) }
+   820→   820→        if (isDefaultOverride(updated)) delete perLetter0[key]
+   821→   821→        else perLetter0[key] = updated
+   822→   822→      }
+   823→   823→      commitTextMutation(mutation, "حذف علامت", perLetter0)
+   824→   824→    },
+   825→   825→
+   826→   826→    clusters: () => {
+   827→   827→      const state = get()
+   828→   828→      const layer = findLayer(state.doc, state.selectedLayerId)
+   829→   829→      if (!layer?.text) return []
+   830→   830→      return letterClusters(layer.text.text)
+   831→   831→    },
+   832→   832→  }
+   833→   833→})
+   834→   834→
+   835→   835→// قلاب آزمون مرورگری: دسترسی مستقیم استور در کنسول برای عیب‌یابی.
+   836→   836→// باید «بعد از» ساخت استور اجرا شود؛ نوشتنش داخل initializer تابع create
+   837→   837→// به خطای «Cannot access 'useEditorStore' before initialization» می‌انجامد،
+   838→   838→// چون create فراخوانِ initializer را پیش از پایان انتساب const اجرا می‌کند.
+   839→   839→if (typeof window !== "undefined") {
+   840→   840→  ;(window as unknown as Record<string, unknown>).__pelcStore = useEditorStore
+   841→   841→}
+   842→   842→
