@@ -58,6 +58,14 @@ export function CanvasSizePicker() {
     setOpen(false)
   }
 
+  /** اندازهٔ آماده — بلافاصله روی بوم اعمال می‌شود تا رنگ انتخاب و ابعاد بوم همان لحظه عوض شود */
+  const applyPreset = (p: (typeof PRESETS)[number]) => {
+    setCanvasSize(p.w, p.h, p.dpi)
+    setDraftW(String(p.w))
+    setDraftH(String(p.h))
+    setDraftDpi(p.dpi)
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -79,11 +87,7 @@ export function CanvasSizePicker() {
                 key={p.label}
                 type="button"
                 title={`${p.w} × ${p.h} · ${p.dpi}dpi`}
-                onClick={() => {
-                  setDraftW(String(p.w))
-                  setDraftH(String(p.h))
-                  setDraftDpi(p.dpi)
-                }}
+                onClick={() => applyPreset(p)}
                 className={cn(
                   "flex items-center justify-center gap-1 rounded-md border px-1.5 py-1.5 text-[11px] font-medium transition-colors",
                   active
