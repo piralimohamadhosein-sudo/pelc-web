@@ -11,8 +11,8 @@ import { Panels } from "@/components/pelc/Panels"
 import { SaveDialog } from "@/components/pelc/SaveDialog"
 import { WelcomeDialog, WELCOME_SEEN_KEY } from "@/components/pelc/WelcomeDialog"
 import { SupportDialog } from "@/components/pelc/SupportDialog"
-import { Shamsa } from "@/components/pelc/Shamsa"
 import { useEditorStore } from "@/lib/pelc/store"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Undo2, Redo2, Save, MessageCircle } from "lucide-react"
@@ -84,12 +84,15 @@ export default function Home() {
       {/* نوار بالا — هدر باریک با مدالیون شمسه و حاشیهٔ گره‌چینی */}
       <header className="shrink-0">
         <div className="flex items-center gap-2 border-b bg-card px-3 py-1.5">
-          <span
-            className="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#e4c35c] to-[#b08f2f] text-[#2a1f06] shadow-sm"
-            aria-hidden
-          >
-            <Shamsa className="size-5" />
-          </span>
+          {/* آیکون اصلی برنامه — بالای سمت راست: مربع سبز زمردی با «پلک» طلایی نستعلیق */}
+          <Image
+            src="/app-icon.png"
+            alt="آیکون برنامهٔ پلک"
+            width={36}
+            height={36}
+            priority
+            className="size-9 shrink-0 rounded-lg ring-1 ring-[#8a6d1f]/60 shadow-sm"
+          />
           {/* لوگوی برند — «پلک» با قلم امیری (نسخ قرآنی) و طلای تذهیب */}
           <p className="pelc-brand text-[1.2rem] leading-[1.4]">پلک</p>
 
