@@ -25,8 +25,9 @@ import {
   safeFilename,
   type ExportFormat,
 } from "@/lib/pelc/export"
+import { isNativeApp, saveImageToGallery } from "@/lib/pelc/nativeSave"
 import { useToast } from "@/hooks/use-toast"
-import { Download, LoaderCircle } from "lucide-react"
+import { Download, LoaderCircle, Images } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
@@ -43,6 +44,8 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [busy, setBusy] = useState(false)
   /** پاسخ پرسش پس‌زمینه: null = هنوز انتخاب نشده، true = شفاف (پوستر)، false = پس‌زمینهٔ سند */
   const [transparentBg, setTransparentBg] = useState<boolean | null>(null)
+  // در بستهٔ اندروید، خروجی به گالری می‌رود؛ در مرورگر دانلود می‌شود
+  const native = typeof window !== "undefined" && isNativeApp()
 
   const save = async () => {
     setBusy(true)
@@ -50,13 +53,19 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const base = safeFilename(doc.title)
       const wantTransparent = transparentBg === true
       if (format === "PNG") {
-        downloadBlob(await exportPng(doc, { scale, quality, transparent: wantTransparent }), `${base}.png`)
+        const blob = await exportPng(doc, { scale, quality, transparent: wantTransparent })
+        if (native) await saveImageToGallery(blob, base)
+        else downloadBlob(blob, `${base}.png`)
       } else if (format === "JPG") {
-        downloadBlob(await exportJpg(doc, { scale, quality, transparent: wantTransparent }), `${base}.jpg`)
+        const blob = await exportJpg(doc, { scale, quality, transparent: wantTransparent })
+        if (native) await saveImageToGallery(blob, base)
+        else downloadBlob(blob, `${base}.jpg`)
       }
       toast({
-        title: "ذخیره شد",
-        description: `${FORMATS.find((f) => f.id === format)?.label}${wantTransparent ? " — پس‌زمینهٔ شفاف" : ""}`,
+        title: native ? "در گالری ذخیره شد" : "ذخیره شد",
+        description: native
+          ? `آلبوم «پلک» در گالری — ${FORMATS.find((f) => f.id === format)?.label}${wantTransparent ? " — پس‌زمینهٔ شفاف" : ""}`
+          : `${FORMATS.find((f) => f.id === format)?.label}${wantTransparent ? " — پس‌زمینهٔ شفاف" : ""}`,
       })
       onOpenChange(false)
     } catch (e) {
@@ -76,7 +85,9 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         <DialogHeader>
           <DialogTitle>ذخیره در چه قالبی؟</DialogTitle>
           <DialogDescription>
-            قالب فایل خروجی را انتخاب کنید؛ فایل تصویری با همان قالب دانلود می‌شود.
+            {native
+              ? "قالب فایل خروجی را انتخاب کنید؛ تصویر در آلبوم «پلک» داخل گالری گوشی ذخیره می‌شود."
+              : "قالب فایل خروجی را انتخاب کنید؛ فایل تصویری با همان قالب دانلود می‌شود."}
           </DialogDescription>
         </DialogHeader>
 
@@ -175,7 +186,14 @@ export function SaveDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             انصراف
           </Button>
           <Button onClick={save} disabled={busy}>
-            {busy ? <LoaderCircle className="size-4 animate-spin" /> : <Download className="size-4" />} دانلود
+            {busy ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : native ? (
+              <Images className="size-4" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            {native ? "ذخیره در گالری" : "دانلود"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -5,6 +5,7 @@
     "": {
       "name": "nextjs_tailwind_shadcn_ts",
       "dependencies": {
+        "@capacitor-community/media": "^9.1.0",
         "@capacitor/android": "^8.6.2",
         "@capacitor/cli": "^8.6.2",
         "@capacitor/core": "^8.6.2",
@@ -124,6 +125,8 @@
     "@babel/traverse": ["@babel/traverse@7.28.6", "https://registry.npmjs.com/@babel/traverse/-/traverse-7.28.6.tgz", { "dependencies": { "@babel/code-frame": "^7.28.6", "@babel/generator": "^7.28.6", "@babel/helper-globals": "^7.28.0", "@babel/parser": "^7.28.6", "@babel/template": "^7.28.6", "@babel/types": "^7.28.6", "debug": "^4.3.1" } }, "sha512-fgWX62k02qtjqdSNTAGxmKYY/7FSL9WAS1o2Hu5+I5m9T0yxZzr4cnrfXQ/MX0rIifthCSs6FKTlzYbJcPtMNg=="],
 
     "@babel/types": ["@babel/types@7.28.6", "https://registry.npmjs.com/@babel/types/-/types-7.28.6.tgz", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg=="],
+
+    "@capacitor-community/media": ["@capacitor-community/media@9.1.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-HTd+n2pPBE7otRqYzr09sOrAb59t/bVzCME19dVixKmDP09rxB+Mt6aj0c5AhMoKS8Jw4712r5tk+gifHTlW/Q=="],
 
     "@capacitor/android": ["@capacitor/android@8.6.2", "", { "peerDependencies": { "@capacitor/core": "^8.6.0" } }, "sha512-dWXnXmOVTtxU91n5h11MzoQ7PAMjyzU1qguw0mBJZiwSuhGvLKTG/IlsQ75H8qeE0a1acV2f573x15wYvyzuVA=="],
 

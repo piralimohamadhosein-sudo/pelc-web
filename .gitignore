@@ -86,3 +86,7 @@ server.log
 /server.log
 /.initial_snapshot.json
 
+
+# Signing secrets (local only)
+/android/keystore/
+/android/keystore.properties
