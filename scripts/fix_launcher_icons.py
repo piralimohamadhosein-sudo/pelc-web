@@ -9,7 +9,7 @@ from PIL import Image
 
 SRC = "/home/z/my-project/src/app/icon.png"
 RES = "/home/z/my-project/android/app/src/main/res"
-BG = (25, 101, 85, 255)  # #196555 — سبز پس‌زمینهٔ آیکون پلک
+BG = (1, 99, 76, 255)  # #01634c — سبز تیرهٔ آیکون جدید پلک
 
 im = Image.open(SRC).convert("RGBA")
 
