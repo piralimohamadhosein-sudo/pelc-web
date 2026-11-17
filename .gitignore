@@ -52,3 +52,37 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Android build artifacts
+/android/app/build
+/android/build
+/android/.gradle
+/android/captures
+/android/local.properties
+/android/app/release
+*.apk
+*.aab
+
+# Capacitor
+/android/app/src/main/assets/public/_next/
+# (note: keep assets/public/index.html and fonts/ in repo so cap sync isn't required to run)
+
+# Editor tools
+.idea/
+.vscode/
+*.iml
+
+# JDK + downloaded tools (we cache these locally)
+/tools/
+
+# Sandbox artifacts not part of the pelc app
+/tool-results/
+/tests/
+/examples/
+/mini-services/
+/.zscripts/
+/db/
+/dev.log
+/server.log
+/.initial_snapshot.json
+
