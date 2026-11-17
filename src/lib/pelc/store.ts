@@ -267,12 +267,19 @@ export const useEditorStore = create<EditorState>((set, get) => {
     closeTextDialog: () => set({ textDialogOpen: false, editingTextLayerId: null }),
 
     selectLayer: (id) => set({ selectedLayerId: id, selectedClusterStart: null, selectedLayerIds: [] }),
-    selectAllLayers: () =>
+    selectAllLayers: () => {
+      // فقط متن‌ها انتخاب می‌شوند؛ عکس‌ها مستقل می‌مانند و در عمل گروهی نقشی ندارند
+      const doc = get().doc
+      const textIds = doc.layers.filter((l) => l.kind === "TEXT" && !l.locked).map((l) => l.id)
+      const cur = get().selectedLayerId
+      const curLayer = cur ? doc.layers.find((l) => l.id === cur) : undefined
       set({
-        // لایه‌های قفل‌شده را نمی‌شود کشید؛ در انتخاب‌همه نمی‌آیند
-        selectedLayerIds: get().doc.layers.filter((l) => !l.locked).map((l) => l.id),
+        selectedLayerIds: textIds,
+        // اگر لایهٔ تکی فعلی عکس است، در انتخاب‌همهٔ متنی باقی نمی‌ماند
+        selectedLayerId: curLayer?.kind === "TEXT" ? cur : (textIds[0] ?? null),
         selectedClusterStart: null,
-      }),
+      })
+    },
     clearMultiSelect: () => set({ selectedLayerIds: [] }),
     selectLetter: (clusterStart) => set({ selectedClusterStart: clusterStart }),
     setActiveTab: (tab) => set({ activeTab: tab }),

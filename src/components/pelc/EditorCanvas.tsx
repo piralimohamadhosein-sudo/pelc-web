@@ -450,7 +450,7 @@ export function EditorCanvas() {
               ? "border-accent bg-accent text-accent-foreground hover:bg-accent/85"
               : "border-primary/70 bg-primary text-primary-foreground hover:bg-primary/85"
           }`}
-          title="همهٔ لایه‌ها انتخاب می‌شوند؛ جابه‌جایی، مقیاس، رنگ، قلم و حالت پرکردن با یک عمل روی همه اعمال می‌شود (Esc = لغو)"
+          title="همهٔ متن‌ها انتخاب می‌شوند (عکس‌ها انتخاب نمی‌شوند)؛ جابه‌جایی، مقیاس، رنگ، قلم و حالت پرکردن با یک عمل روی همهٔ متن‌ها اعمال می‌شود (Esc = لغو)"
         >
           <BoxSelect className="size-4" />
           {selectedLayerIds.length > 0
@@ -565,7 +565,7 @@ export function EditorCanvas() {
         </span>
         <span className="ms-2">
           {selectedLayerIds.length > 1
-            ? `· ${selectedLayerIds.length.toLocaleString("fa-IR")} لایه انتخاب شد — رنگ، قلم، پرکردن و جابه‌جایی روی همه اعمال می‌شود`
+            ? `· ${selectedLayerIds.length.toLocaleString("fa-IR")} متن انتخاب شد — رنگ، قلم، پرکردن و جابه‌جایی روی همهٔ متن‌ها اعمال می‌شود (عکس‌ها مستقل می‌مانند)`
             : "· لایه را بکشید یا با تاچ‌پد جابه‌جا کنید"}
         </span>
       </div>
